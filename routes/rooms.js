@@ -186,12 +186,36 @@ router.post('/:id/status', requireAdmin, async (req, res) => {
 });
 
 // ── Helpers ────────────────────────────────────────────────
+function bedIcon(status) {
+  const colors = { free: '#2d9e6b', occupied: '#d94f4f', dirty: '#c47f10' };
+  const c = colors[status] || '#2d9e6b';
+  return `<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="3" y="18" width="26" height="8" rx="2" fill="${c}" opacity="0.25"/>
+    <rect x="3" y="18" width="26" height="3" rx="1.5" fill="${c}" opacity="0.5"/>
+    <rect x="3" y="13" width="3" height="13" rx="1.5" fill="${c}"/>
+    <rect x="26" y="13" width="3" height="13" rx="1.5" fill="${c}"/>
+    <rect x="6" y="13" width="20" height="7" rx="2" fill="${c}" opacity="0.35"/>
+    <rect x="7" y="14" width="7" height="5" rx="1.5" fill="${c}" opacity="0.7"/>
+    <rect x="18" y="14" width="7" height="5" rx="1.5" fill="${c}" opacity="0.7"/>
+  </svg>`;
+}
+
+function statusIcon(status) {
+  if (status === 'free') return `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" fill="#2d9e6b"/><path d="M4 7l2 2 4-4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  if (status === 'occupied') return `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" fill="#d94f4f"/><path d="M7 4v3.5" stroke="white" stroke-width="1.5" stroke-linecap="round"/><circle cx="7" cy="9.5" r="0.75" fill="white"/></svg>`;
+  return `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" fill="#c47f10"/><path d="M4.5 4.5l5 5M9.5 4.5l-5 5" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg>`;
+}
+
 function roomTile(r) {
+  const label = { free: 'Free', occupied: 'Occupied', dirty: 'Needs clean' }[r.status] || r.status;
   return `
     <a href="/rooms/${r.id}" class="room-tile room-tile-${r.status}" data-status="${r.status}">
+      <div class="room-tile-bed">${bedIcon(r.status)}</div>
       <div class="room-tile-num">${r.number}</div>
-      <div class="room-tile-status">${r.status.charAt(0).toUpperCase() + r.status.slice(1)}</div>
-      <div class="room-tile-floor">Floor ${r.floor}</div>
+      <div class="room-tile-footer">
+        <span class="room-tile-status-icon">${statusIcon(r.status)}</span>
+        <span class="room-tile-status">${label}</span>
+      </div>
     </a>
   `;
 }

@@ -439,23 +439,28 @@ html, body {
 }
 .room-tile {
   border-radius: var(--radius-lg);
-  padding: 16px 14px;
+  padding: 14px 14px 12px;
   cursor: pointer;
   text-decoration: none;
-  display: block;
+  display: flex;
+  flex-direction: column;
   border: 1px solid transparent;
   position: relative;
+  min-height: 120px;
+  transition: transform 0.1s;
 }
-.room-tile:active { opacity: 0.85; }
+.room-tile:active { transform: scale(0.97); opacity: 0.9; }
 .room-tile-free { background: var(--green-bg); border-color: var(--green-border); }
 .room-tile-occupied { background: var(--red-bg); border-color: var(--red-border); }
 .room-tile-dirty { background: var(--amber-bg); border-color: var(--amber-border); }
-.room-tile-num { font-size: 24px; font-weight: 700; color: var(--text); }
-.room-tile-status { font-size: 12px; font-weight: 600; margin-top: 4px; }
+.room-tile-bed { margin-bottom: 8px; line-height: 0; }
+.room-tile-num { font-size: 22px; font-weight: 800; color: var(--text); letter-spacing: -0.5px; flex: 1; }
+.room-tile-footer { display: flex; align-items: center; gap: 5px; margin-top: 8px; }
+.room-tile-status-icon { line-height: 0; flex-shrink: 0; }
+.room-tile-status { font-size: 11px; font-weight: 700; }
 .room-tile-free .room-tile-status { color: var(--green); }
 .room-tile-occupied .room-tile-status { color: var(--red); }
 .room-tile-dirty .room-tile-status { color: var(--amber); }
-.room-tile-floor { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
 
 /* ── Room hero (detail) ──────────────────────────────────── */
 .room-hero {
