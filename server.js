@@ -21,7 +21,7 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: {
-    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+    maxAge: 30 * 24 * 60 * 60 * 1000,
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax'
@@ -32,8 +32,27 @@ if (process.env.NODE_ENV === 'production') {
   app.set('trust proxy', 1);
 }
 
-// ── Static files ──────────────────────────────────────────
-app.use(express.static(path.join(__dirname, 'public')));
+// ── Static files — served BEFORE auth, no login needed ───
+app.use(express.static(path.join(__dirname, 'public'), {
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.png')) res.setHeader('Content-Type', 'image/png');
+    if (filePath.endsWith('.svg')) res.setHeader('Content-Type', 'image/svg+xml');
+    if (filePath.endsWith('.webmanifest') || filePath.endsWith('manifest.json')) {
+      res.setHeader('Content-Type', 'application/manifest+json');
+    }
+  }
+}));
+
+// ── Explicit public routes (no auth) ─────────────────────
+app.get('/icons/:file', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'icons', req.params.file));
+});
+app.get('/manifest.json', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'manifest.json'));
+});
+app.get('/sw.js', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'sw.js'));
+});
 
 // ── Routes ────────────────────────────────────────────────
 const authRouter = require('./routes/auth');
@@ -58,6 +77,10 @@ app.get('/health', (req, res) => res.json({ status: 'ok', ts: new Date().toISOSt
 
 // ── 404 ───────────────────────────────────────────────────
 app.use((req, res) => {
+  // Don't redirect static asset requests — just 404 them
+  if (req.path.match(/\.(png|svg|jpg|ico|webp|css|js|json|woff|ttf)$/)) {
+    return res.status(404).send('Not found');
+  }
   res.status(404).redirect('/reservations');
 });
 
