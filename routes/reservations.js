@@ -157,7 +157,7 @@ router.get('/:id', requireAdmin, async (req, res) => {
 
   const html = `
     <div class="page-header">
-      <a href="/" class="back-link">← Bookings</a>
+      <a href="/reservations" class="back-link">← Bookings</a>
     </div>
 
     ${req.query.msg ? `<div class="toast-banner">${req.query.msg}</div>` : ''}

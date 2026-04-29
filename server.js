@@ -40,18 +40,20 @@ const cleanerRouter = require('./routes/cleaner');
 const settingsRouter = require('./routes/settings');
 
 app.use('/', authRouter);
-app.use('/', reservationsRouter);        // GET / = reservations home
 app.use('/reservations', reservationsRouter);
 app.use('/rooms', roomsRouter);
 app.use('/cleaner', cleanerRouter);
 app.use('/settings', settingsRouter);
+
+// Home → reservations list
+app.get('/', (req, res) => res.redirect('/reservations'));
 
 // ── Health check ──────────────────────────────────────────
 app.get('/health', (req, res) => res.json({ status: 'ok', ts: new Date().toISOString() }));
 
 // ── 404 ───────────────────────────────────────────────────
 app.use((req, res) => {
-  res.status(404).redirect('/');
+  res.status(404).redirect('/reservations');
 });
 
 // ── Start ─────────────────────────────────────────────────

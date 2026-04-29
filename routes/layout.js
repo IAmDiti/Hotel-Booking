@@ -41,7 +41,7 @@ function renderLayout(title, content, activeTab, role) {
     <!-- Bottom nav -->
     <nav class="bottom-nav">
       ${isAdmin ? `
-        <a href="/" class="nav-btn ${activeTab === 'reservations' ? 'active' : ''}">
+        <a href="/reservations" class="nav-btn ${activeTab === 'reservations' ? 'active' : ''}">
           <span class="nav-icon">📋</span>
           <span class="nav-label">Bookings</span>
         </a>
