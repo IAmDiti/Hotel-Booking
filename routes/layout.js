@@ -16,7 +16,7 @@ function renderLayout(title, content, activeTab, role) {
   <title>${title} · Pocket Reception</title>
   <link rel="stylesheet" href="/css/app.css">
   <link rel="manifest" href="/manifest.json">
-  <link rel="apple-touch-icon" href="/icons/icon-192.svg">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
 </head>
 <body>
   <div class="app-shell">
