@@ -3,6 +3,7 @@ const router = express.Router();
 const supabase = require('../lib/supabase');
 const { requireCleaner } = require('../middleware/auth');
 const { renderLayout } = require('./layout');
+const { sendPushToRole } = require('../lib/push');
 
 // ── GET /cleaner — Dirty rooms list ───────────────────────
 router.get('/', requireCleaner, async (req, res) => {
@@ -62,13 +63,39 @@ router.get('/', requireCleaner, async (req, res) => {
 
 // ── POST /cleaner/:id/clean — Mark single room clean ──────
 router.post('/:id/clean', requireCleaner, async (req, res) => {
+  const { data: room } = await supabase.from('rooms').select('number').eq('id', req.params.id).single();
   await supabase.from('rooms').update({ status: 'free' }).eq('id', req.params.id);
+
+  const roomNum = room ? room.number : '?';
+  sendPushToRole('admin', {
+    title: '✅ Room is ready',
+    body: `Room ${roomNum} has been cleaned and is free`,
+    icon: '/icons/icon-192.svg',
+    badge: '/icons/icon-192.svg',
+    vibrate: [100, 50, 100],
+    data: { url: '/rooms' }
+  });
+
   res.redirect('/cleaner?msg=Room+marked+clean+✓');
 });
 
 // ── POST /cleaner/all-clean — Mark all dirty rooms clean ──
 router.post('/all-clean', requireCleaner, async (req, res) => {
+  const { data: dirtyRooms } = await supabase.from('rooms').select('number').eq('status', 'dirty');
   await supabase.from('rooms').update({ status: 'free' }).eq('status', 'dirty');
+
+  const count = dirtyRooms ? dirtyRooms.length : 0;
+  if (count > 0) {
+    sendPushToRole('admin', {
+      title: '✅ All rooms are ready',
+      body: `${count} room${count !== 1 ? 's' : ''} cleaned and free`,
+      icon: '/icons/icon-192.svg',
+      badge: '/icons/icon-192.svg',
+      vibrate: [100, 50, 100],
+      data: { url: '/rooms' }
+    });
+  }
+
   res.redirect('/cleaner?msg=All+rooms+marked+clean+✓');
 });
 

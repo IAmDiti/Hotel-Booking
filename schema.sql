@@ -67,3 +67,17 @@ on conflict (number) do nothing;
 -- ============================================================
 -- alter table rooms enable row level security;
 -- alter table reservations enable row level security;
+
+-- ============================================================
+-- PUSH SUBSCRIPTIONS — Web Push notifications
+-- ============================================================
+create table if not exists push_subscriptions (
+  id uuid primary key default uuid_generate_v4(),
+  role text not null check (role in ('admin', 'cleaner')),
+  endpoint text not null unique,
+  p256dh text not null,
+  auth text not null,
+  created_at timestamptz default now()
+);
+
+create index if not exists idx_push_role on push_subscriptions(role);

@@ -3,6 +3,7 @@ const router = express.Router();
 const supabase = require('../lib/supabase');
 const { requireAdmin } = require('../middleware/auth');
 const { renderLayout } = require('./layout');
+const { sendPushToRole } = require('../lib/push');
 
 // ── GET / — Reservations list (home) ──────────────────────
 router.get('/', requireAdmin, async (req, res) => {
@@ -254,6 +255,17 @@ router.post('/:id/checkout', requireAdmin, async (req, res) => {
   await supabase.from('reservations').update({ status: 'checked_out' }).eq('id', r.id);
   if (r.room_id) {
     await supabase.from('rooms').update({ status: 'dirty' }).eq('id', r.room_id);
+    // Get room number for notification
+    const { data: room } = await supabase.from('rooms').select('number').eq('id', r.room_id).single();
+    const roomNum = room ? room.number : '?';
+    sendPushToRole('cleaner', {
+      title: '🧹 Room needs cleaning',
+      body: `Room ${roomNum} is ready to be cleaned`,
+      icon: '/icons/icon-192.svg',
+      badge: '/icons/icon-192.svg',
+      vibrate: [200, 100, 200],
+      data: { url: '/cleaner' }
+    });
   }
 
   res.redirect(`/reservations/${r.id}?msg=Checked+out+—+room+marked+dirty`);

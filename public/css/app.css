@@ -757,3 +757,28 @@ html, body {
   .login-wrap { border-radius: 24px; }
   .drawer { border-radius: 20px; left: 50%; }
 }
+
+/* ── Push notification bell ──────────────────────────────── */
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.topbar-notif-btn {
+  background: rgba(255,255,255,0.15);
+  border: none;
+  color: white;
+  border-radius: 8px;
+  width: 32px;
+  height: 32px;
+  font-size: 15px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: bell-pulse 2s ease-in-out infinite;
+}
+@keyframes bell-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
