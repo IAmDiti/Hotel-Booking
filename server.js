@@ -4,14 +4,13 @@ const cookieParser = require('cookie-parser');
 const session = require('express-session');
 const path = require('path');
 const { configureWebPush } = require('./lib/push');
+const { ICON_192, ICON_512 } = require('./lib/icons');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ── Web Push setup ────────────────────────────────────────
 configureWebPush();
 
-// ── Middleware ────────────────────────────────────────────
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser());
@@ -28,30 +27,35 @@ app.use(session({
   }
 }));
 
-if (process.env.NODE_ENV === 'production') {
-  app.set('trust proxy', 1);
-}
+if (process.env.NODE_ENV === 'production') app.set('trust proxy', 1);
 
-// ── Static files — served BEFORE auth, no login needed ───
-app.use(express.static(path.join(__dirname, 'public'), {
-  setHeaders: (res, filePath) => {
-    if (filePath.endsWith('.png')) res.setHeader('Content-Type', 'image/png');
-    if (filePath.endsWith('.svg')) res.setHeader('Content-Type', 'image/svg+xml');
-    if (filePath.endsWith('.webmanifest') || filePath.endsWith('manifest.json')) {
-      res.setHeader('Content-Type', 'application/manifest+json');
-    }
-  }
-}));
+// ── Public static assets (no auth) ───────────────────────
+app.use('/css', express.static(path.join(__dirname, 'public/css')));
 
-// ── Explicit public routes (no auth) ─────────────────────
-app.get('/icons/:file', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'icons', req.params.file));
+// ── Icon routes — served from embedded buffers ────────────
+app.get('/icons/icon-192.png', (req, res) => {
+  res.setHeader('Content-Type', 'image/png');
+  res.setHeader('Cache-Control', 'public, max-age=86400');
+  res.send(ICON_192);
 });
+app.get('/icons/icon-512.png', (req, res) => {
+  res.setHeader('Content-Type', 'image/png');
+  res.setHeader('Cache-Control', 'public, max-age=86400');
+  res.send(ICON_512);
+});
+app.get('/icons/apple-touch-icon.png', (req, res) => {
+  res.setHeader('Content-Type', 'image/png');
+  res.send(ICON_192);
+});
+
+// ── Manifest & SW ─────────────────────────────────────────
 app.get('/manifest.json', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'manifest.json'));
+  res.setHeader('Content-Type', 'application/manifest+json');
+  res.sendFile(path.join(__dirname, 'public/manifest.json'));
 });
 app.get('/sw.js', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'sw.js'));
+  res.setHeader('Content-Type', 'application/javascript');
+  res.sendFile(path.join(__dirname, 'public/sw.js'));
 });
 
 // ── Routes ────────────────────────────────────────────────
@@ -69,27 +73,20 @@ app.use('/cleaner', cleanerRouter);
 app.use('/settings', settingsRouter);
 app.use('/push', pushRouter);
 
-// Home → reservations list
 app.get('/', (req, res) => res.redirect('/reservations'));
+app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
-// ── Health check ──────────────────────────────────────────
-app.get('/health', (req, res) => res.json({ status: 'ok', ts: new Date().toISOString() }));
-
-// ── 404 ───────────────────────────────────────────────────
 app.use((req, res) => {
-  // Don't redirect static asset requests — just 404 them
   if (req.path.match(/\.(png|svg|jpg|ico|webp|css|js|json|woff|ttf)$/)) {
     return res.status(404).send('Not found');
   }
   res.status(404).redirect('/reservations');
 });
 
-// ── Start ─────────────────────────────────────────────────
 app.listen(PORT, () => {
   console.log(`🏨 Pocket Reception running on http://localhost:${PORT}`);
-  console.log(`   NODE_ENV: ${process.env.NODE_ENV || 'development'}`);
   if (!process.env.SUPABASE_URL) console.warn('   ⚠️  SUPABASE_URL not set');
-  if (!process.env.VAPID_PUBLIC_KEY) console.warn('   ⚠️  VAPID keys not set — push disabled');
+  if (!process.env.VAPID_PUBLIC_KEY) console.warn('   ⚠️  VAPID keys not set');
 });
 
 module.exports = app;
