@@ -3,16 +3,12 @@ const express = require('express');
 const cookieParser = require('cookie-parser');
 const session = require('express-session');
 const path = require('path');
-const compression = require('compression');
 const { configureWebPush } = require('./lib/push');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 configureWebPush();
-
-// ── Compression — reduces payload size ~70% ───────────────
-app.use(compression());
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
@@ -32,13 +28,8 @@ app.use(session({
 
 if (process.env.NODE_ENV === 'production') app.set('trust proxy', 1);
 
-// ── Static files with aggressive caching ─────────────────
-app.use(express.static(path.join(__dirname, 'public'), {
-  maxAge: '7d',       // CSS/JS cached for 7 days
-  etag: true
-}));
+app.use(express.static(path.join(__dirname, 'public')));
 
-// ── Routes ────────────────────────────────────────────────
 const authRouter = require('./routes/auth');
 const reservationsRouter = require('./routes/reservations');
 const roomsRouter = require('./routes/rooms');
