@@ -136,6 +136,25 @@ function renderLayout(title, content, activeTab, role) {
       return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
     }
   })();
+
+  // ── Progress bar + instant tap feedback ────────────────
+  (function() {
+    const bar = document.createElement('div');
+    bar.style.cssText = 'position:fixed;top:0;left:0;width:0;height:3px;background:#e8a838;z-index:9999;transition:width 0.25s,opacity 0.3s;opacity:0;pointer-events:none';
+    document.body.appendChild(bar);
+
+    function show() { bar.style.opacity='1'; bar.style.width='40%'; setTimeout(()=>bar.style.width='70%',300); }
+    function hide() { bar.style.width='100%'; setTimeout(()=>{ bar.style.opacity='0'; setTimeout(()=>bar.style.width='0',300); },200); }
+
+    document.addEventListener('click', function(e) {
+      const a = e.target.closest('a[href]');
+      const btn = e.target.closest('button[type=submit], .btn-primary, .btn-warning, .btn-clean, .room-tile, .res-card');
+      if (a && a.href && !a.href.includes('javascript') && a.href !== location.href) show();
+      if (btn && btn.tagName !== 'A') { show(); btn.style.transform='scale(0.97)'; setTimeout(()=>btn.style.transform='',200); }
+    });
+
+    window.addEventListener('pageshow', hide);
+  })();
   </script>
 </body>
 </html>`;
