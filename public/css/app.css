@@ -783,6 +783,7 @@ html, body {
   50% { opacity: 0.6; }
 }
 
+
 /* ── Availability checker ────────────────────────────────── */
 .avail-card {
   background: var(--surface);
@@ -794,7 +795,7 @@ html, body {
 .avail-label {
   font-size: 11px;
   font-weight: 600;
-  color: var(--gray);
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 10px;
@@ -802,16 +803,17 @@ html, body {
 .avail-form { display: flex; gap: 8px; align-items: flex-end; }
 .avail-dates { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; flex: 1; }
 .avail-field { display: flex; flex-direction: column; gap: 4px; }
-.avail-field label { font-size: 11px; font-weight: 600; color: var(--gray); }
+.avail-field label { font-size: 11px; font-weight: 600; color: var(--text-muted); }
 .avail-field input {
-  border: 1px solid var(--color-border-secondary);
+  border: 1px solid var(--border-mid);
   border-radius: 8px;
   padding: 9px 10px;
   font-size: 14px;
-  font-family: var(--font-sans);
-  color: var(--color-text-primary);
+  font-family: inherit;
+  color: var(--text);
   background: var(--surface);
   width: 100%;
+  -webkit-appearance: none;
 }
 .avail-field input:focus { outline: none; border-color: var(--brand); }
 .avail-btn {
@@ -823,7 +825,7 @@ html, body {
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  font-family: var(--font-sans);
+  font-family: inherit;
   white-space: nowrap;
   flex-shrink: 0;
   align-self: flex-end;
@@ -838,42 +840,19 @@ html, body {
   border-top: 0.5px solid var(--border);
   gap: 10px;
 }
-.avail-ok {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--green);
-}
-.avail-none {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--red);
-}
+.avail-ok { font-size: 13px; font-weight: 600; color: var(--green); }
+.avail-none { font-size: 13px; font-weight: 600; color: var(--red); }
 .avail-clear {
   font-size: 12px;
-  color: var(--gray);
+  color: var(--text-muted);
   text-decoration: none;
   white-space: nowrap;
   flex-shrink: 0;
-  border: 0.5px solid var(--border);
+  border: 0.5px solid var(--border-mid);
   padding: 4px 10px;
   border-radius: 20px;
 }
-
-/* ── Availability tile states ────────────────────────────── */
-.room-tile.avail-yes {
-  border-width: 2px;
-  border-color: var(--green);
-}
-.room-tile.avail-no {
-  opacity: 0.5;
-  pointer-events: none;
-}
-.avail-badge {
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--green);
-  margin-top: 4px;
-}
-.avail-badge.booked {
-  color: var(--red);
-}
+.room-tile.avail-yes { border-width: 2px; border-color: var(--green); }
+.room-tile.avail-no { opacity: 0.45; }
+.avail-badge { font-size: 10px; font-weight: 700; color: var(--green); margin-top: 4px; }
+.avail-badge.booked { color: var(--red); }
