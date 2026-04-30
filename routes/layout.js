@@ -14,7 +14,7 @@ function renderLayout(title, content, activeTab, role) {
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#1a1a2e">
   <title>${title} · Pocket Reception</title>
-  <link rel="stylesheet" href="/css/app.css">
+  <link rel="stylesheet" href="/css/app.css?v=2">
   <link rel="prefetch" href="/reservations">
   <link rel="prefetch" href="/rooms">
   <link rel="prefetch" href="/cleaner">
