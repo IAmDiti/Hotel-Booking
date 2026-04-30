@@ -6,20 +6,65 @@ const { renderLayout } = require('./layout');
 
 // ── GET /rooms — Room board ─────────────────────────────────
 router.get('/', requireAdmin, async (req, res) => {
-  const { data: rooms, error } = await supabase
-    .from('rooms')
-    .select('*')
-    .order('number');
+  const { checkIn, checkOut } = req.query;
 
-  if (error) return res.send(renderLayout('Rooms', `<p class="error-msg">${error.message}</p>`, 'rooms', 'admin'));
+  // Run rooms fetch + optional availability check in parallel
+  const queries = [supabase.from('rooms').select('*').order('number')];
+  if (checkIn && checkOut && checkOut > checkIn) {
+    queries.push(
+      supabase.from('reservations').select('room_id')
+        .lt('check_in', checkOut)
+        .gt('check_out', checkIn)
+        .in('status', ['confirmed', 'checked_in'])
+        .not('room_id', 'is', null)
+    );
+  }
+
+  const results = await Promise.all(queries);
+  const rooms = results[0].data || [];
+  const bookedIds = results[1] ? (results[1].data || []).map(r => r.room_id) : null;
 
   const free = rooms.filter(r => r.status === 'free').length;
   const occupied = rooms.filter(r => r.status === 'occupied').length;
   const dirty = rooms.filter(r => r.status === 'dirty').length;
 
+  // When checking availability, mark rooms
+  let availableCount = null;
+  if (bookedIds !== null) {
+    availableCount = rooms.filter(r => !bookedIds.includes(r.id)).length;
+  }
+
+  const fmtDate = d => { const [y,m,day] = d.split('-'); return `${day}.${m}.${y}`; };
+
   const html = `
     <div class="page-header">
       <h2 class="page-title">Room board</h2>
+    </div>
+
+    <!-- Availability checker -->
+    <div class="avail-card">
+      <div class="avail-label">Check availability</div>
+      <form method="GET" action="/rooms" class="avail-form">
+        <div class="avail-dates">
+          <div class="avail-field">
+            <label>From</label>
+            <input type="date" name="checkIn" value="${checkIn || ''}" required />
+          </div>
+          <div class="avail-field">
+            <label>To</label>
+            <input type="date" name="checkOut" value="${checkOut || ''}" required />
+          </div>
+        </div>
+        <button type="submit" class="avail-btn">Check</button>
+      </form>
+      ${bookedIds !== null ? `
+        <div class="avail-result">
+          ${availableCount > 0
+            ? `<span class="avail-ok">✓ ${availableCount} room${availableCount !== 1 ? 's' : ''} available for ${fmtDate(checkIn)} – ${fmtDate(checkOut)}</span>`
+            : `<span class="avail-none">✗ No rooms available for these dates</span>`
+          }
+          <a href="/rooms" class="avail-clear">Clear</a>
+        </div>` : ''}
     </div>
 
     <div class="stats-row">
@@ -39,15 +84,23 @@ router.get('/', requireAdmin, async (req, res) => {
 
     ${req.query.msg ? `<div class="toast-banner">${req.query.msg}</div>` : ''}
 
+    ${bookedIds === null ? `
     <div class="filter-row">
       <button class="filter-chip active" data-filter="all" onclick="setFilter('all', this)">All</button>
       <button class="filter-chip" data-filter="free" onclick="setFilter('free', this)">Free</button>
       <button class="filter-chip" data-filter="occupied" onclick="setFilter('occupied', this)">Occupied</button>
       <button class="filter-chip" data-filter="dirty" onclick="setFilter('dirty', this)">Dirty</button>
-    </div>
+    </div>` : `
+    <div class="section-label">Rooms for ${fmtDate(checkIn)} – ${fmtDate(checkOut)}</div>`}
 
     <div class="rooms-grid" id="rooms-grid">
-      ${rooms.map(r => roomTile(r)).join('')}
+      ${rooms.map(r => {
+        if (bookedIds !== null) {
+          const isAvailable = !bookedIds.includes(r.id);
+          return roomTileAvail(r, isAvailable);
+        }
+        return roomTile(r);
+      }).join('')}
     </div>
 
     <script>
@@ -58,6 +111,11 @@ router.get('/', requireAdmin, async (req, res) => {
           tile.style.display = (f === 'all' || tile.dataset.status === f) ? '' : 'none';
         });
       }
+      // Auto-set min dates
+      const ci = document.querySelector('[name=checkIn]');
+      const co = document.querySelector('[name=checkOut]');
+      if (ci && !ci.value) ci.value = new Date().toISOString().split('T')[0];
+      ci && ci.addEventListener('change', () => { if (co.value <= ci.value) co.value = ''; });
       const toast = document.querySelector('.toast-banner');
       if (toast) setTimeout(() => toast.remove(), 3000);
     </script>
