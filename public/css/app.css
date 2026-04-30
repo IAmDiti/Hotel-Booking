@@ -784,75 +784,101 @@ html, body {
 }
 
 
+
 /* ── Availability checker ────────────────────────────────── */
 .avail-card {
-  background: var(--surface);
-  border: 0.5px solid var(--border);
-  border-radius: var(--radius);
-  padding: 14px;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  border-radius: var(--radius-lg);
+  padding: 16px;
   margin-bottom: 16px;
 }
 .avail-label {
   font-size: 11px;
-  font-weight: 600;
-  color: var(--text-muted);
+  font-weight: 700;
+  color: rgba(255,255,255,0.6);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 10px;
+  letter-spacing: 1px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
+.avail-label::before { content: '📅'; font-size: 13px; }
 .avail-form { display: flex; gap: 8px; align-items: flex-end; }
 .avail-dates { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; flex: 1; }
-.avail-field { display: flex; flex-direction: column; gap: 4px; }
-.avail-field label { font-size: 11px; font-weight: 600; color: var(--text-muted); }
+.avail-field { display: flex; flex-direction: column; gap: 5px; }
+.avail-field label {
+  font-size: 10px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
 .avail-field input {
-  border: 1px solid var(--border-mid);
-  border-radius: 8px;
-  padding: 9px 10px;
+  border: 1.5px solid rgba(255,255,255,0.15);
+  border-radius: 10px;
+  padding: 10px 12px;
   font-size: 14px;
   font-family: inherit;
-  color: var(--text);
-  background: var(--surface);
+  color: white;
+  background: rgba(255,255,255,0.1);
   width: 100%;
   -webkit-appearance: none;
+  color-scheme: dark;
 }
-.avail-field input:focus { outline: none; border-color: var(--brand); }
+.avail-field input:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: rgba(255,255,255,0.15);
+}
 .avail-btn {
-  background: var(--brand);
-  color: white;
+  background: var(--accent);
+  color: var(--brand);
   border: none;
-  border-radius: 8px;
-  padding: 9px 14px;
+  border-radius: 10px;
+  padding: 10px 16px;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   font-family: inherit;
   white-space: nowrap;
   flex-shrink: 0;
   align-self: flex-end;
+  letter-spacing: 0.2px;
 }
-.avail-btn:active { opacity: 0.85; }
+.avail-btn:active { opacity: 0.85; transform: scale(0.97); }
 .avail-result {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 0.5px solid var(--border);
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 8px;
   gap: 10px;
 }
-.avail-ok { font-size: 13px; font-weight: 600; color: var(--green); }
-.avail-none { font-size: 13px; font-weight: 600; color: var(--red); }
+.avail-ok {
+  font-size: 13px;
+  font-weight: 700;
+  color: #5ddc9a;
+}
+.avail-none {
+  font-size: 13px;
+  font-weight: 700;
+  color: #ff7f7f;
+}
 .avail-clear {
   font-size: 12px;
-  color: var(--text-muted);
+  color: rgba(255,255,255,0.5);
   text-decoration: none;
   white-space: nowrap;
   flex-shrink: 0;
-  border: 0.5px solid var(--border-mid);
+  border: 0.5px solid rgba(255,255,255,0.2);
   padding: 4px 10px;
   border-radius: 20px;
 }
-.room-tile.avail-yes { border-width: 2px; border-color: var(--green); }
-.room-tile.avail-no { opacity: 0.45; }
+.avail-clear:active { opacity: 0.7; }
+.room-tile.avail-yes { border-width: 2px; border-color: var(--green); box-shadow: 0 0 0 1px var(--green-bg); }
+.room-tile.avail-no { opacity: 0.35; }
 .avail-badge { font-size: 10px; font-weight: 700; color: var(--green); margin-top: 4px; }
 .avail-badge.booked { color: var(--red); }
