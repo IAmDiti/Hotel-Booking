@@ -119,7 +119,8 @@ router.get('/', requireAdmin, async (req, res) => {
       ${rooms.map(r => {
         if (bookedIds !== null) {
           const isAvailable = !bookedIds.includes(r.id);
-          return roomTileAvail(r, isAvailable);
+          const isCheckoutDay = !isAvailable && checkoutTodayIds.includes(r.id);
+          return roomTileAvail(r, isAvailable, isCheckoutDay);
         }
         return roomTile(r);
       }).join('')}
@@ -288,17 +289,30 @@ function roomTile(r) {
   `;
 }
 
-function roomTileAvail(r, isAvailable) {
+function roomTileAvail(r, isAvailable, isCheckoutDay) {
+  let tileClass, icon, label;
+
+  if (isCheckoutDay) {
+    tileClass = 'avail-checkout';
+    label = 'Checkout day';
+    icon = `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" fill="#c47f10"/><path d="M7 3v4l2 2" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg>`;
+  } else if (isAvailable) {
+    tileClass = 'avail-yes';
+    label = 'Available';
+    icon = `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" fill="#2d9e6b"/><path d="M4 7l2 2 4-4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  } else {
+    tileClass = 'avail-no';
+    label = 'Booked';
+    icon = `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" fill="#d94f4f"/><path d="M4.5 4.5l5 5M9.5 4.5l-5 5" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg>`;
+  }
+
   return `
-    <a href="/rooms/${r.id}" class="room-tile room-tile-${r.status} ${isAvailable ? 'avail-yes' : 'avail-no'}" data-status="${r.status}">
+    <a href="/rooms/${r.id}" class="room-tile room-tile-${r.status} ${tileClass}" data-status="${r.status}">
       <div class="room-tile-bed">${bedIcon(r.status)}</div>
       <div class="room-tile-num">${r.number}</div>
       <div class="room-tile-footer">
-        <span class="room-tile-status-icon">${isAvailable
-          ? `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" fill="#2d9e6b"/><path d="M4 7l2 2 4-4" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`
-          : `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" fill="#d94f4f"/><path d="M4.5 4.5l5 5M9.5 4.5l-5 5" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg>`
-        }</span>
-        <span class="room-tile-status">${isAvailable ? 'Available' : 'Booked'}</span>
+        <span class="room-tile-status-icon">${icon}</span>
+        <span class="room-tile-status">${label}</span>
       </div>
     </a>
   `;

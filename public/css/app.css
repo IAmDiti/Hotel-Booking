@@ -882,3 +882,13 @@ html, body {
 .room-tile.avail-no { opacity: 0.35; }
 .avail-badge { font-size: 10px; font-weight: 700; color: var(--green); margin-top: 4px; }
 .avail-badge.booked { color: var(--red); }
+
+/* ── Checkout day tile ───────────────────────────────────── */
+.room-tile.avail-checkout {
+  border-width: 2px;
+  border-color: var(--amber-border);
+  background: var(--amber-bg);
+  opacity: 1;
+}
+.room-tile.avail-checkout .room-tile-status { color: var(--amber); }
+.room-tile.avail-checkout .room-tile-num { color: var(--text); }
