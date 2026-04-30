@@ -22,11 +22,33 @@ router.get('/', requireAdmin, async (req, res) => {
 
   const results = await Promise.all(queries);
   const rooms = results[0].data || [];
-  const bookedIds = results[1] ? (results[1].data || []).map(r => r.room_id) : null;
+
+  // bookedIds: rooms that have an overlapping active reservation
+  // A reservation checking OUT on the search checkIn date does NOT overlap (gt not gte)
+  // So same-day turnover is correctly allowed by the SQL query
+  let bookedIds = null;
+  if (results[1]) {
+    bookedIds = (results[1].data || []).map(r => r.room_id).filter(Boolean);
+  }
 
   const free = rooms.filter(r => r.status === 'free').length;
   const occupied = rooms.filter(r => r.status === 'occupied').length;
   const dirty = rooms.filter(r => r.status === 'dirty').length;
+
+  // Fetch rooms whose current guest checks out exactly on search checkIn
+  // These are 'occupied' rooms but SHOULD show as available (same-day turnover)
+  let checkoutTodayIds = [];
+  if (bookedIds !== null && checkIn) {
+    const { data: checkoutToday } = await supabase
+      .from('reservations')
+      .select('room_id')
+      .eq('check_out', checkIn)
+      .in('status', ['confirmed', 'checked_in'])
+      .not('room_id', 'is', null);
+    checkoutTodayIds = (checkoutToday || []).map(r => r.room_id).filter(Boolean);
+    // Remove these from bookedIds since they check out on the search date
+    bookedIds = bookedIds.filter(id => !checkoutTodayIds.includes(id));
+  }
 
   // When checking availability, mark rooms
   let availableCount = null;
