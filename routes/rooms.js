@@ -76,27 +76,15 @@ router.get('/:id', requireAdmin, async (req, res) => {
 
   if (error || !room) return res.redirect('/rooms');
 
-  // Get current guest if occupied
-  let currentRes = null;
-  if (room.status === 'occupied') {
-    const { data } = await supabase
-      .from('reservations')
-      .select('*')
-      .eq('room_id', room.id)
-      .eq('status', 'checked_in')
-      .single();
-    currentRes = data;
-  }
-
-  // Upcoming reservations for this room
-  const { data: upcoming } = await supabase
-    .from('reservations')
-    .select('*')
-    .eq('room_id', room.id)
-    .in('status', ['confirmed', 'pending'])
-    .gte('check_in', new Date().toISOString().split('T')[0])
-    .order('check_in')
-    .limit(5);
+  // Run both queries in parallel
+  const [{ data: currentRes }, { data: upcoming }] = await Promise.all([
+    room.status === 'occupied'
+      ? supabase.from('reservations').select('id, guest_name, check_out').eq('room_id', room.id).eq('status', 'checked_in').maybeSingle()
+      : Promise.resolve({ data: null }),
+    supabase.from('reservations').select('id, guest_name, check_in, check_out, status').eq('room_id', room.id)
+      .in('status', ['confirmed', 'pending']).gte('check_in', new Date().toISOString().split('T')[0])
+      .order('check_in').limit(3)
+  ]);
 
   const html = `
     <div class="page-header">

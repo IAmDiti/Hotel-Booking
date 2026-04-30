@@ -15,6 +15,9 @@ function renderLayout(title, content, activeTab, role) {
   <meta name="theme-color" content="#1a1a2e">
   <title>${title} · Pocket Reception</title>
   <link rel="stylesheet" href="/css/app.css">
+  <link rel="prefetch" href="/reservations">
+  <link rel="prefetch" href="/rooms">
+  <link rel="prefetch" href="/cleaner">
   <link rel="manifest" href="/manifest.json">
   <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
 </head>

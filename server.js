@@ -28,8 +28,20 @@ app.use(session({
 
 if (process.env.NODE_ENV === 'production') app.set('trust proxy', 1);
 
-app.use(express.static(path.join(__dirname, 'public')));
+// ── Static files — aggressive caching ────────────────────
+app.use(express.static(path.join(__dirname, 'public'), {
+  maxAge: '7d',
+  etag: true,
+  lastModified: true
+}));
 
+// ── No-cache for HTML pages (always fresh data) ───────────
+app.use((req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store');
+  next();
+});
+
+// ── Routes ────────────────────────────────────────────────
 const authRouter = require('./routes/auth');
 const reservationsRouter = require('./routes/reservations');
 const roomsRouter = require('./routes/rooms');
@@ -46,7 +58,6 @@ app.use('/push', pushRouter);
 
 app.get('/', (req, res) => res.redirect('/reservations'));
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
-
 app.use((req, res) => res.status(404).redirect('/reservations'));
 
 app.listen(PORT, () => {

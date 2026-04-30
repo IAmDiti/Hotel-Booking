@@ -128,27 +128,19 @@ router.get('/:id', requireAdmin, async (req, res) => {
     .eq('id', req.params.id)
     .single();
 
-  if (error || !r) return res.redirect('/');
+  if (error || !r) return res.redirect('/reservations');
 
-  // Get available rooms for the dates
+  // Run conflict check and room fetch IN PARALLEL
   let availableRooms = [];
   if (r.status === 'pending' || r.status === 'confirmed') {
-    const { data: conflicts } = await supabase
-      .from('reservations')
-      .select('room_id')
-      .lt('check_in', r.check_out)
-      .gt('check_out', r.check_in)
-      .in('status', ['confirmed', 'checked_in'])
-      .not('room_id', 'is', null)
-      .neq('id', r.id);
-
+    const [{ data: conflicts }, { data: allRooms }] = await Promise.all([
+      supabase.from('reservations').select('room_id')
+        .lt('check_in', r.check_out).gt('check_out', r.check_in)
+        .in('status', ['confirmed', 'checked_in'])
+        .not('room_id', 'is', null).neq('id', r.id),
+      supabase.from('rooms').select('id, number, floor, status').order('number')
+    ]);
     const takenIds = (conflicts || []).map(c => c.room_id).filter(Boolean);
-
-    const { data: allRooms } = await supabase
-      .from('rooms')
-      .select('*')
-      .order('number');
-
     availableRooms = (allRooms || []).filter(room =>
       !takenIds.includes(room.id) && room.status !== 'occupied'
     );
