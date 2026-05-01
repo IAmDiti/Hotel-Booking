@@ -14,7 +14,7 @@ router.get('/', requireCleaner, async (req, res) => {
     .eq('status', 'dirty')
     .order('number');
 
-  if (error) return res.send(renderLayout('Cleaner', `<p class="error-msg">${error.message}</p>`, 'cleaner', req.session.role, req.hotel));
+  if (error) return res.send(renderLayout('Cleaner', `<p class=\"error-msg\">\${error.message}</p>`, 'cleaner', req.session.role, req.hotel, req.session.superAdmin));
 
   const html = `
     <div class="page-header">
@@ -59,7 +59,7 @@ router.get('/', requireCleaner, async (req, res) => {
     </script>
   `;
 
-  res.send(renderLayout('Cleaner', html, 'cleaner', req.session.role, req.hotel));
+  res.send(renderLayout('Cleaner', html, 'cleaner', req.session.role, req.hotel, req.session.superAdmin));
 });
 
 // ── POST /cleaner/:id/clean — Mark single room clean ──────

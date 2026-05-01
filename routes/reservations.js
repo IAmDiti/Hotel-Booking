@@ -99,7 +99,7 @@ router.get('/', requireAdmin, async (req, res) => {
     </script>
   `;
 
-  res.send(renderLayout('Bookings', html, 'reservations', req.session.role, req.hotel));
+  res.send(renderLayout('Bookings', html, 'reservations', req.session.role, req.hotel, req.session.superAdmin));
 });
 
 // ── POST /reservations — Create reservation ────────────────
@@ -211,7 +211,7 @@ router.get('/:id', requireAdmin, async (req, res) => {
     </script>
   `;
 
-  res.send(renderLayout(r.guest_name, html, 'reservations', req.session.role, req.hotel));
+  res.send(renderLayout(r.guest_name, html, 'reservations', req.session.role, req.hotel, req.session.superAdmin));
 });
 
 // ── POST /reservations/:id/assign — Assign room ────────────

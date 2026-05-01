@@ -4,8 +4,11 @@ const supabase = require('../lib/supabase');
 const { requireAdmin } = require('../middleware/auth');
 const { renderLayout } = require('./layout');
 
-// GET /settings
+// GET /settings — super admin only
 router.get('/', requireAdmin, async (req, res) => {
+  if (!req.session.superAdmin) {
+    return res.redirect(`/${req.hotel.slug}/reservations`);
+  }
   const hotel = req.hotel;
   const { data: rooms } = await supabase.from('rooms').select('*').eq('hotel_id', hotel.id).order('number');
 
@@ -170,6 +173,15 @@ router.post('/rooms', requireAdmin, async (req, res) => {
 router.post('/rooms/:id/delete', requireAdmin, async (req, res) => {
   await supabase.from('rooms').delete().eq('id', req.params.id).eq('hotel_id', req.hotel.id);
   res.redirect(`/${req.hotel.slug}/settings?msg=Room+deleted`);
+});
+
+
+// Protect all POST routes in settings
+router.use((req, res, next) => {
+  if (!req.session.superAdmin) {
+    return res.redirect(`/${req.hotel.slug}/reservations`);
+  }
+  next();
 });
 
 module.exports = router;

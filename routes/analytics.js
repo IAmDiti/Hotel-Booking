@@ -5,6 +5,10 @@ const { requireAdmin } = require('../middleware/auth');
 const { renderLayout } = require('./layout');
 
 router.get('/', requireAdmin, async (req, res) => {
+  // Only super admin can see analytics
+  if (!req.session.superAdmin) {
+    return res.redirect(`/${req.hotel.slug}/reservations`);
+  }
   const hotel = req.hotel;
   const hotelId = hotel.id;
 

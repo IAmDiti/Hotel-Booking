@@ -139,7 +139,8 @@ body{font-family:-apple-system,sans-serif;background:#f6f6f4;margin:0;padding:0}
         </div>
       </div>
       <div class="hotel-actions">
-        <a href="/${h.slug}/login" class="btn-visit" target="_blank">Open →</a>
+        <a href="/admin/hotels/${h.slug}/access" class="btn-visit">Open →</a>
+        <a href="/admin/hotels/${h.slug}/access" onclick="sessionStorage.setItem('goTo','analytics')" class="btn-visit" style="background:#6b21a8">📊</a>
         <form method="POST" action="/admin/hotels/${h.id}/toggle" style="margin:0">
           <button type="submit" class="btn-toggle">${h.active ? 'Disable' : 'Enable'}</button>
         </form>
@@ -163,6 +164,18 @@ router.post('/hotels/:id/toggle', requireSuperAdmin, async (req, res) => {
   const { data: h } = await supabase.from('hotels').select('active').eq('id', req.params.id).single();
   await supabase.from('hotels').update({ active: !h.active }).eq('id', req.params.id);
   res.redirect('/admin');
+});
+
+// GET /admin/hotels/:id/access — super admin enters a hotel with full access
+router.get('/hotels/:slug/access', requireSuperAdmin, async (req, res) => {
+  const { data: hotel } = await supabase.from('hotels').select('*').eq('slug', req.params.slug).single();
+  if (!hotel) return res.redirect('/admin');
+  // Set hotel session as admin AND keep superAdmin flag
+  req.session.role = 'admin';
+  req.session.hotelId = hotel.id;
+  req.session.hotelSlug = hotel.slug;
+  req.session.superAdmin = true; // keep super admin privileges
+  res.redirect(`/${hotel.slug}/reservations`);
 });
 
 // POST /admin/logout

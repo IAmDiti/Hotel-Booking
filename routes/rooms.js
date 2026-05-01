@@ -146,7 +146,7 @@ router.get('/', requireAdmin, async (req, res) => {
     </script>
   `;
 
-  res.send(renderLayout('Rooms', html, 'rooms', req.session.role, req.hotel));
+  res.send(renderLayout('Rooms', html, 'rooms', req.session.role, req.hotel, req.session.superAdmin));
 });
 
 // ── GET /rooms/:id — Room detail / status change ────────────
@@ -244,7 +244,7 @@ router.get('/:id', requireAdmin, async (req, res) => {
     </script>
   `;
 
-  res.send(renderLayout('Room ' + room.number, html, 'rooms', req.session.role, req.hotel));
+  res.send(renderLayout('Room ' + room.number, html, 'rooms', req.session.role, req.hotel, req.session.superAdmin));
 });
 
 // ── POST /rooms/:id/status — Update room status ─────────────

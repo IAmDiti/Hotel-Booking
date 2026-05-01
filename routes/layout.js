@@ -1,4 +1,4 @@
-function renderLayout(title, content, activeTab, role, hotel) {
+function renderLayout(title, content, activeTab, role, hotel, isSuperAdmin) {
   const isAdmin = role === 'admin';
   const slug = hotel?.slug || '';
 
@@ -42,12 +42,14 @@ function renderLayout(title, content, activeTab, role, hotel) {
         <a href="/${slug}/cleaner" class="nav-btn ${activeTab === 'cleaner' ? 'active' : ''}">
           <span class="nav-icon">🧹</span><span class="nav-label">Cleaner</span>
         </a>
-        <a href="/${slug}/analytics" class="nav-btn ${activeTab === 'analytics' ? 'active' : ''}">
-          <span class="nav-icon">📊</span><span class="nav-label">Analytics</span>
-        </a>
-        <a href="/${slug}/settings" class="nav-btn ${activeTab === 'settings' ? 'active' : ''}">
-          <span class="nav-icon">⚙️</span><span class="nav-label">Settings</span>
-        </a>
+        ${isSuperAdmin ? `
+          <a href="/${slug}/analytics" class="nav-btn ${activeTab === 'analytics' ? 'active' : ''}">
+            <span class="nav-icon">📊</span><span class="nav-label">Analytics</span>
+          </a>
+          <a href="/${slug}/settings" class="nav-btn ${activeTab === 'settings' ? 'active' : ''}">
+            <span class="nav-icon">⚙️</span><span class="nav-label">Settings</span>
+          </a>
+        ` : ''}
       ` : `
         <a href="/${slug}/cleaner" class="nav-btn active">
           <span class="nav-icon">🧹</span><span class="nav-label">Cleaner</span>
