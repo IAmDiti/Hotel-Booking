@@ -254,7 +254,7 @@ router.post('/:id/status', requireAdmin, async (req, res) => {
   if (!validStatuses.includes(status)) return res.redirect(`/${req.hotel.slug}/rooms`);
 
   await supabase.from('rooms').update({ status }).eq('id', req.params.id).eq('hotel_id', req.hotel.id);
-  res.redirect('/rooms?msg=Room+updated+✓');
+  res.redirect(`/${req.hotel.slug}/rooms?msg=Room+updated+✓`);
 });
 
 // ── Helpers ────────────────────────────────────────────────

@@ -218,7 +218,7 @@ router.get('/:id', requireAdmin, async (req, res) => {
 router.post('/:id/assign', requireAdmin, async (req, res) => {
   const { room_id } = req.body;
   const { data: r } = await supabase.from('reservations').select('*').eq('id', req.params.id).single();
-  if (!r) return res.redirect('/');
+  if (!r) return res.redirect(`/${req.hotel.slug}/reservations`);
 
   // Check no overlap
   const { data: conflicts } = await supabase
@@ -258,7 +258,7 @@ router.post('/:id/checkin', requireAdmin, async (req, res) => {
 // ── POST /reservations/:id/checkout ───────────────────────
 router.post('/:id/checkout', requireAdmin, async (req, res) => {
   const { data: r } = await supabase.from('reservations').select('*').eq('id', req.params.id).single();
-  if (!r) return res.redirect('/');
+  if (!r) return res.redirect(`/${req.hotel.slug}/reservations`);
 
   await supabase.from('reservations').update({ status: 'checked_out' }).eq('id', r.id);
   if (r.room_id) {
@@ -282,7 +282,7 @@ router.post('/:id/checkout', requireAdmin, async (req, res) => {
 // ── POST /reservations/:id/cancel ─────────────────────────
 router.post('/:id/cancel', requireAdmin, async (req, res) => {
   const { data: r } = await supabase.from('reservations').select('*').eq('id', req.params.id).single();
-  if (!r) return res.redirect('/');
+  if (!r) return res.redirect(`/${req.hotel.slug}/reservations`);
 
   await supabase.from('reservations').update({ status: 'cancelled', room_id: null }).eq('id', r.id);
   if (r.room_id) {

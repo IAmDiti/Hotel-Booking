@@ -77,7 +77,7 @@ router.post('/:id/clean', requireCleaner, async (req, res) => {
     data: { url: '/rooms' }
   });
 
-  res.redirect('/cleaner?msg=Room+marked+clean+✓');
+  res.redirect(`/${req.hotel.slug}/cleaner?msg=Room+marked+clean+✓`);
 });
 
 // ── POST /cleaner/all-clean — Mark all dirty rooms clean ──
@@ -97,7 +97,7 @@ router.post('/all-clean', requireCleaner, async (req, res) => {
     });
   }
 
-  res.redirect('/cleaner?msg=All+rooms+marked+clean+✓');
+  res.redirect(`/${req.hotel.slug}/cleaner?msg=All+rooms+marked+clean+✓`);
 });
 
 module.exports = router;
