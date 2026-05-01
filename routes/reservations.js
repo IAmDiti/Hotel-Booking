@@ -66,13 +66,13 @@ router.get('/', requireAdmin, async (req, res) => {
 
     <div class="res-list">
       ${upcoming.length === 0 ? '<div class="empty-state"><div class="empty-icon">📋</div><p>No upcoming reservations.<br>Tap "+ New" to add one.</p></div>' : ''}
-      ${upcoming.map(r => reservationCard(r)).join('')}
+      ${upcoming.map(r => reservationCard(r, req.hotel.slug)).join('')}
     </div>
 
     ${checkedOut.length > 0 ? `
       <div class="section-label" style="margin-top:20px">Recently checked out</div>
       <div class="res-list">
-        ${checkedOut.slice(0, 5).map(r => reservationCard(r)).join('')}
+        ${checkedOut.slice(0, 5).map(r => reservationCard(r, req.hotel.slug)).join('')}
       </div>
     ` : ''}
 
@@ -195,7 +195,7 @@ router.get('/:id', requireAdmin, async (req, res) => {
 
     <!-- ACTIONS -->
     <div class="actions-section">
-      ${actionsHtml(r, availableRooms)}
+      ${actionsHtml(r, availableRooms, req.hotel.slug)}
     </div>
 
     <!-- Danger zone -->
@@ -310,9 +310,9 @@ function statusLabel(s) {
   return { pending: 'Pending', confirmed: 'Confirmed', checked_in: 'Checked in', checked_out: 'Checked out', cancelled: 'Cancelled' }[s] || s;
 }
 
-function reservationCard(r) {
+function reservationCard(r, slug) {
   return `
-    <a href="/${req.hotel.slug}/reservations/${r.id}" class="res-card">
+    <a href="/${slug}/reservations/${r.id}" class="res-card">
       <div class="res-avatar">${initials(r.guest_name)}</div>
       <div class="res-info">
         <div class="res-name">${r.guest_name}</div>
@@ -323,7 +323,7 @@ function reservationCard(r) {
   `;
 }
 
-function actionsHtml(r, availableRooms) {
+function actionsHtml(r, availableRooms, slug) {
   if (r.status === 'pending') {
     if (availableRooms.length === 0) {
       return `<p class="no-rooms-msg">No free rooms for these dates.</p>`;

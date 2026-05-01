@@ -122,9 +122,9 @@ router.get('/', requireAdmin, async (req, res) => {
         if (bookedIds !== null) {
           const isAvailable = !bookedIds.includes(r.id);
           const isCheckoutDay = !isAvailable && checkoutTodayIds.includes(r.id);
-          return roomTileAvail(r, isAvailable, isCheckoutDay);
+          return roomTileAvail(r, isAvailable, isCheckoutDay, req.hotel.slug);
         }
-        return roomTile(r);
+        return roomTile(r, req.hotel.slug);
       }).join('')}
     </div>
 
@@ -278,10 +278,10 @@ function statusIcon(status) {
   return `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" fill="#c47f10"/><path d="M4.5 4.5l5 5M9.5 4.5l-5 5" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg>`;
 }
 
-function roomTile(r) {
+function roomTile(r, slug) {
   const label = { free: 'Free', occupied: 'Occupied', dirty: 'Needs clean' }[r.status] || r.status;
   return `
-    <a href="/${req.hotel.slug}/rooms/${r.id}" class="room-tile room-tile-${r.status}" data-status="${r.status}">
+    <a href="/${slug}/rooms/${r.id}" class="room-tile room-tile-${r.status}" data-status="${r.status}">
       <div class="room-tile-bed">${bedIcon(r.status)}</div>
       <div class="room-tile-num">${r.number}</div>
       <div class="room-tile-footer">
@@ -292,7 +292,7 @@ function roomTile(r) {
   `;
 }
 
-function roomTileAvail(r, isAvailable, isCheckoutDay) {
+function roomTileAvail(r, isAvailable, isCheckoutDay, slug) {
   let tileClass, icon, label;
 
   if (isCheckoutDay) {
