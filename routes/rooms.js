@@ -68,7 +68,7 @@ router.get('/', requireAdmin, async (req, res) => {
     <!-- Availability checker -->
     <div class="avail-card">
       <div class="avail-label">Check availability</div>
-      <form method="GET" action="/rooms" class="avail-form">
+      <form method="GET" action="/${req.hotel.slug}/rooms" class="avail-form">
         <div class="avail-dates">
           <div class="avail-field">
             <label>From</label>

@@ -32,7 +32,7 @@ router.get('/', requireAdmin, async (req, res) => {
           <span class="drawer-title">New reservation</span>
           <button class="drawer-close" onclick="closeQuickAdd()">×</button>
         </div>
-        <form method="POST" action="/reservations" class="quick-form">
+        <form method="POST" action="/${req.hotel.slug}/reservations" class="quick-form">
           <div class="field-group">
             <label>Guest name</label>
             <input type="text" name="guest_name" placeholder="e.g. Marco Rossi" required autocomplete="off" autocapitalize="words" />
