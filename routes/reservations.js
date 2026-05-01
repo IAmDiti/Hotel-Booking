@@ -107,10 +107,10 @@ router.post('/', requireAdmin, async (req, res) => {
   const { guest_name, check_in, check_out, notes, phone } = req.body;
 
   if (!guest_name || !check_in || !check_out) {
-    return res.redirect(`/${req.hotel.slug}/reservations?error=Missing+required+fields');
+    return res.redirect(`/${req.hotel.slug}/reservations?error=Missing+required+fields`);
   }
   if (check_out <= check_in) {
-    return res.redirect(`/${req.hotel.slug}/reservations?error=Check-out+must+be+after+check-in');
+    return res.redirect(`/${req.hotel.slug}/reservations?error=Check-out+must+be+after+check-in`);
   }
 
   const { error } = await supabase.from('reservations').insert({
@@ -123,8 +123,8 @@ router.post('/', requireAdmin, async (req, res) => {
     status: 'pending'
   });
 
-  if (error) return res.redirect(`/${req.hotel.slug}/reservations?error=' + encodeURIComponent(error.message));
-  res.redirect(`/${req.hotel.slug}/reservations?saved=1');
+  if (error) return res.redirect(`/${req.hotel.slug}/reservations?error=${encodeURIComponent(error.message)}`);
+  res.redirect(`/${req.hotel.slug}/reservations?saved=1`);
 });
 
 // ── GET /reservations/:id — Reservation detail ─────────────
@@ -291,7 +291,7 @@ router.post('/:id/cancel', requireAdmin, async (req, res) => {
     }
   }
 
-  res.redirect(`/${req.hotel.slug}/reservations?msg=Reservation+cancelled');
+  res.redirect(`/${req.hotel.slug}/reservations?msg=Reservation+cancelled`);
 });
 
 // ── Helpers ────────────────────────────────────────────────
