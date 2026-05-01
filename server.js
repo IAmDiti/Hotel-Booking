@@ -4,13 +4,13 @@ const cookieParser = require('cookie-parser');
 const session = require('express-session');
 const path = require('path');
 const { configureWebPush } = require('./lib/push');
-const { startCheckoutReminderCron } = require('./lib/cron');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-configureWebPush();
-startCheckoutReminderCron();
+// ── Health check FIRST — before anything else ─────────────
+// Railway pings this to confirm the app is alive
+app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
@@ -47,13 +47,22 @@ app.use('/settings', settingsRouter);
 app.use('/push', pushRouter);
 
 app.get('/', (req, res) => res.redirect('/reservations'));
-app.get('/health', (req, res) => res.json({ status: 'ok' }));
 app.use((req, res) => res.status(404).redirect('/reservations'));
 
+// ── Start server ──────────────────────────────────────────
 app.listen(PORT, () => {
   console.log(`🏨 Pocket Reception running on http://localhost:${PORT}`);
   if (!process.env.SUPABASE_URL) console.warn('   ⚠️  SUPABASE_URL not set');
   if (!process.env.TWILIO_AUTH_TOKEN) console.warn('   ⚠️  Twilio not set — WhatsApp disabled');
+
+  // Start cron AFTER server is listening — non-blocking
+  try {
+    configureWebPush();
+    const { startCheckoutReminderCron } = require('./lib/cron');
+    startCheckoutReminderCron();
+  } catch (err) {
+    console.warn('⚠️  Cron/Push setup error:', err.message);
+  }
 });
 
 module.exports = app;
