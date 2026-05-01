@@ -3,13 +3,11 @@ const express = require('express');
 const cookieParser = require('cookie-parser');
 const session = require('express-session');
 const path = require('path');
-const { configureWebPush } = require('./lib/push');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ── Health check FIRST — before anything else ─────────────
-// Railway pings this to confirm the app is alive
+// ── Health check first ────────────────────────────────────
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
 app.use(express.urlencoded({ extended: true }));
@@ -30,38 +28,33 @@ app.use(session({
 
 if (process.env.NODE_ENV === 'production') app.set('trust proxy', 1);
 
-app.use(express.static(path.join(__dirname, 'public'), { maxAge: '1h' }));
+// ── Static files ──────────────────────────────────────────
+app.use('/css', express.static(path.join(__dirname, 'public/css'), { maxAge: '1d' }));
+app.use(express.static(path.join(__dirname, 'public')));
 
-const authRouter = require('./routes/auth');
-const reservationsRouter = require('./routes/reservations');
-const roomsRouter = require('./routes/rooms');
-const cleanerRouter = require('./routes/cleaner');
-const settingsRouter = require('./routes/settings');
+// ── Routes ────────────────────────────────────────────────
+const superAdminRouter = require('./routes/superAdmin');
+const hotelRouter = require('./routes/hotel');
 const pushRouter = require('./routes/push');
 
-app.use('/', authRouter);
-app.use('/reservations', reservationsRouter);
-app.use('/rooms', roomsRouter);
-app.use('/cleaner', cleanerRouter);
-app.use('/settings', settingsRouter);
+app.use('/admin', superAdminRouter);
 app.use('/push', pushRouter);
+app.use('/:hotelSlug', hotelRouter);
 
-app.get('/', (req, res) => res.redirect('/reservations'));
-app.use((req, res) => res.status(404).redirect('/reservations'));
+// Root — redirect to admin or show hotel list
+app.get('/', (req, res) => res.redirect('/admin'));
 
-// ── Start server ──────────────────────────────────────────
 app.listen(PORT, () => {
-  console.log(`🏨 Pocket Reception running on http://localhost:${PORT}`);
+  console.log(`🏨 Pocket Reception SaaS running on http://localhost:${PORT}`);
   if (!process.env.SUPABASE_URL) console.warn('   ⚠️  SUPABASE_URL not set');
-  if (!process.env.TWILIO_AUTH_TOKEN) console.warn('   ⚠️  Twilio not set — WhatsApp disabled');
 
-  // Start cron AFTER server is listening — non-blocking
   try {
-    configureWebPush();
+    const webpush = require('./lib/push');
+    if (webpush.configureWebPush) webpush.configureWebPush();
     const { startCheckoutReminderCron } = require('./lib/cron');
     startCheckoutReminderCron();
   } catch (err) {
-    console.warn('⚠️  Cron/Push setup error:', err.message);
+    console.warn('⚠️  Push/cron setup:', err.message);
   }
 });
 

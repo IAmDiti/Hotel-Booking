@@ -10,6 +10,7 @@ router.get('/', requireCleaner, async (req, res) => {
   const { data: dirtyRooms, error } = await supabase
     .from('rooms')
     .select('*')
+    .eq('hotel_id', req.hotel.id)
     .eq('status', 'dirty')
     .order('number');
 
@@ -38,7 +39,7 @@ router.get('/', requireCleaner, async (req, res) => {
               <div class="cleaner-room">Room ${r.number}</div>
               <div class="cleaner-floor">Floor ${r.floor}${r.notes ? ' · ' + r.notes : ''}</div>
             </div>
-            <form method="POST" action="/cleaner/${r.id}/clean">
+            <form method="POST" action="/${req.hotel.slug}/cleaner/${r.id}/clean">
               <button type="submit" class="btn-clean">Done</button>
             </form>
           </div>
@@ -46,7 +47,7 @@ router.get('/', requireCleaner, async (req, res) => {
       </div>
 
       <div style="margin-top:20px">
-        <form method="POST" action="/cleaner/all-clean" onsubmit="return confirm('Mark ALL rooms as clean?')">
+        <form method="POST" action="/${req.hotel.slug}/cleaner/all-clean" onsubmit="return confirm('Mark ALL rooms as clean?')">
           <button type="submit" class="btn-ghost">Mark all as clean</button>
         </form>
       </div>
@@ -58,7 +59,7 @@ router.get('/', requireCleaner, async (req, res) => {
     </script>
   `;
 
-  res.send(renderLayout('Cleaner', html, 'cleaner', req.session.role));
+  res.send(renderLayout('Cleaner', html, 'cleaner', req.session.role, req.hotel));
 });
 
 // ── POST /cleaner/:id/clean — Mark single room clean ──────

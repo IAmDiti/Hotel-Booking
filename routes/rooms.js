@@ -144,7 +144,7 @@ router.get('/', requireAdmin, async (req, res) => {
     </script>
   `;
 
-  res.send(renderLayout('Rooms', html, 'rooms', req.session.role));
+  res.send(renderLayout('Rooms', html, 'rooms', req.session.role, req.hotel));
 });
 
 // ── GET /rooms/:id — Room detail / status change ────────────
@@ -155,7 +155,7 @@ router.get('/:id', requireAdmin, async (req, res) => {
     .eq('id', req.params.id)
     .single();
 
-  if (error || !room) return res.redirect('/rooms');
+  if (error || !room) return res.redirect(`/${req.hotel.slug}/rooms`);
 
   // Run both queries in parallel
   const [{ data: currentRes }, { data: upcoming }] = await Promise.all([
@@ -194,7 +194,7 @@ router.get('/:id', requireAdmin, async (req, res) => {
           <span class="detail-value">${currentRes.check_out}</span>
         </div>
         <div class="detail-row" style="border:none;padding-bottom:12px">
-          <a href="/reservations/${currentRes.id}" class="link-btn">View reservation →</a>
+          <a href="/${req.hotel.slug}/reservations/${currentRes.id}" class="link-btn">View reservation →</a>
         </div>
       </div>
     ` : ''}
@@ -202,19 +202,19 @@ router.get('/:id', requireAdmin, async (req, res) => {
     <div class="section-label">Change status</div>
     <div class="status-actions">
       ${room.status !== 'free' ? `
-        <form method="POST" action="/rooms/${room.id}/status">
+        <form method="POST" action="/${req.hotel.slug}/rooms/${room.id}/status">
           <input type="hidden" name="status" value="free" />
           <button type="submit" class="status-btn status-btn-free">Mark as Free</button>
         </form>
       ` : ''}
       ${room.status !== 'occupied' ? `
-        <form method="POST" action="/rooms/${room.id}/status">
+        <form method="POST" action="/${req.hotel.slug}/rooms/${room.id}/status">
           <input type="hidden" name="status" value="occupied" />
           <button type="submit" class="status-btn status-btn-occupied">Mark as Occupied</button>
         </form>
       ` : ''}
       ${room.status !== 'dirty' ? `
-        <form method="POST" action="/rooms/${room.id}/status">
+        <form method="POST" action="/${req.hotel.slug}/rooms/${room.id}/status">
           <input type="hidden" name="status" value="dirty" />
           <button type="submit" class="status-btn status-btn-dirty">Mark as Dirty</button>
         </form>
@@ -224,7 +224,7 @@ router.get('/:id', requireAdmin, async (req, res) => {
     ${upcoming && upcoming.length > 0 ? `
       <div class="section-label" style="margin-top:20px">Upcoming</div>
       ${upcoming.map(r => `
-        <a href="/reservations/${r.id}" class="res-card" style="margin-bottom:8px">
+        <a href="/${req.hotel.slug}/reservations/${r.id}" class="res-card" style="margin-bottom:8px">
           <div class="res-avatar">${r.guest_name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</div>
           <div class="res-info">
             <div class="res-name">${r.guest_name}</div>
@@ -241,14 +241,14 @@ router.get('/:id', requireAdmin, async (req, res) => {
     </script>
   `;
 
-  res.send(renderLayout('Room ' + room.number, html, 'rooms', req.session.role));
+  res.send(renderLayout('Room ' + room.number, html, 'rooms', req.session.role, req.hotel));
 });
 
 // ── POST /rooms/:id/status — Update room status ─────────────
 router.post('/:id/status', requireAdmin, async (req, res) => {
   const { status } = req.body;
   const validStatuses = ['free', 'occupied', 'dirty'];
-  if (!validStatuses.includes(status)) return res.redirect('/rooms');
+  if (!validStatuses.includes(status)) return res.redirect(`/${req.hotel.slug}/rooms`);
 
   await supabase.from('rooms').update({ status }).eq('id', req.params.id);
   res.redirect('/rooms?msg=Room+updated+✓');
@@ -278,7 +278,7 @@ function statusIcon(status) {
 function roomTile(r) {
   const label = { free: 'Free', occupied: 'Occupied', dirty: 'Needs clean' }[r.status] || r.status;
   return `
-    <a href="/rooms/${r.id}" class="room-tile room-tile-${r.status}" data-status="${r.status}">
+    <a href="/${req.hotel.slug}/rooms/${r.id}" class="room-tile room-tile-${r.status}" data-status="${r.status}">
       <div class="room-tile-bed">${bedIcon(r.status)}</div>
       <div class="room-tile-num">${r.number}</div>
       <div class="room-tile-footer">
@@ -307,7 +307,7 @@ function roomTileAvail(r, isAvailable, isCheckoutDay) {
   }
 
   return `
-    <a href="/rooms/${r.id}" class="room-tile room-tile-${r.status} ${tileClass}" data-status="${r.status}">
+    <a href="/${req.hotel.slug}/rooms/${r.id}" class="room-tile room-tile-${r.status} ${tileClass}" data-status="${r.status}">
       <div class="room-tile-bed">${bedIcon(r.status)}</div>
       <div class="room-tile-num">${r.number}</div>
       <div class="room-tile-footer">

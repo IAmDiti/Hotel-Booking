@@ -3,7 +3,6 @@ const router = express.Router();
 const supabase = require('../lib/supabase');
 const { requireAdmin } = require('../middleware/auth');
 const { renderLayout } = require('./layout');
-const { sendPushToRole } = require('../lib/push');
 const { sendWelcome } = require('../lib/whatsapp');
 
 // ── GET / — Reservations list (home) ──────────────────────
@@ -11,6 +10,7 @@ router.get('/', requireAdmin, async (req, res) => {
   const { data: reservations, error } = await supabase
     .from('reservations')
     .select('*, rooms(number)')
+    .eq('hotel_id', req.hotel.id)
     .not('status', 'eq', 'cancelled')
     .order('check_in', { ascending: true });
 
@@ -99,7 +99,7 @@ router.get('/', requireAdmin, async (req, res) => {
     </script>
   `;
 
-  res.send(renderLayout('Bookings', html, 'reservations', req.session.role));
+  res.send(renderLayout('Bookings', html, 'reservations', req.session.role, req.hotel));
 });
 
 // ── POST /reservations — Create reservation ────────────────
@@ -107,13 +107,14 @@ router.post('/', requireAdmin, async (req, res) => {
   const { guest_name, check_in, check_out, notes, phone } = req.body;
 
   if (!guest_name || !check_in || !check_out) {
-    return res.redirect('/?error=Missing+required+fields');
+    return res.redirect(`/${req.hotel.slug}/reservations?error=Missing+required+fields');
   }
   if (check_out <= check_in) {
-    return res.redirect('/?error=Check-out+must+be+after+check-in');
+    return res.redirect(`/${req.hotel.slug}/reservations?error=Check-out+must+be+after+check-in');
   }
 
   const { error } = await supabase.from('reservations').insert({
+    hotel_id: req.hotel.id,
     guest_name: guest_name.trim(),
     check_in,
     check_out,
@@ -122,8 +123,8 @@ router.post('/', requireAdmin, async (req, res) => {
     status: 'pending'
   });
 
-  if (error) return res.redirect('/?error=' + encodeURIComponent(error.message));
-  res.redirect('/?saved=1');
+  if (error) return res.redirect(`/${req.hotel.slug}/reservations?error=' + encodeURIComponent(error.message));
+  res.redirect(`/${req.hotel.slug}/reservations?saved=1');
 });
 
 // ── GET /reservations/:id — Reservation detail ─────────────
@@ -134,7 +135,7 @@ router.get('/:id', requireAdmin, async (req, res) => {
     .eq('id', req.params.id)
     .single();
 
-  if (error || !r) return res.redirect('/reservations');
+  if (error || !r) return res.redirect(`/${req.hotel.slug}/reservations`);
 
   // Run conflict check and room fetch IN PARALLEL
   let availableRooms = [];
@@ -197,7 +198,7 @@ router.get('/:id', requireAdmin, async (req, res) => {
 
     <!-- Danger zone -->
     <div class="danger-zone">
-      <form method="POST" action="/reservations/${r.id}/cancel" onsubmit="return confirm('Cancel this reservation?')">
+      <form method="POST" action="/${req.hotel.slug}/reservations/${r.id}/cancel" onsubmit="return confirm('Cancel this reservation?')">
         <button type="submit" class="btn-ghost-danger">Cancel reservation</button>
       </form>
     </div>
@@ -208,7 +209,7 @@ router.get('/:id', requireAdmin, async (req, res) => {
     </script>
   `;
 
-  res.send(renderLayout(r.guest_name, html, 'reservations', req.session.role));
+  res.send(renderLayout(r.guest_name, html, 'reservations', req.session.role, req.hotel));
 });
 
 // ── POST /reservations/:id/assign — Assign room ────────────
@@ -228,17 +229,17 @@ router.post('/:id/assign', requireAdmin, async (req, res) => {
     .neq('id', r.id);
 
   if (conflicts && conflicts.length > 0) {
-    return res.redirect(`/reservations/${r.id}?msg=Room+already+taken+for+these+dates`);
+    return res.redirect(`/${req.hotel.slug}/reservations/${r.id}?msg=Room+already+taken+for+these+dates`);
   }
 
   await supabase.from('reservations').update({ room_id, status: 'confirmed' }).eq('id', r.id);
-  res.redirect(`/reservations/${r.id}?msg=Room+assigned+✓`);
+  res.redirect(`/${req.hotel.slug}/reservations/${r.id}?msg=Room+assigned+✓`);
 });
 
 // ── POST /reservations/:id/checkin ─────────────────────────
 router.post('/:id/checkin', requireAdmin, async (req, res) => {
   const { data: r } = await supabase.from('reservations').select('*, rooms(number)').eq('id', req.params.id).single();
-  if (!r || !r.room_id) return res.redirect(`/reservations/${req.params.id}?msg=Assign+a+room+first`);
+  if (!r || !r.room_id) return res.redirect(`/${req.hotel.slug}/reservations/${req.params.id}?msg=Assign+a+room+first`);
 
   await supabase.from('reservations').update({ status: 'checked_in' }).eq('id', r.id);
   await supabase.from('rooms').update({ status: 'occupied' }).eq('id', r.room_id);
@@ -246,10 +247,10 @@ router.post('/:id/checkin', requireAdmin, async (req, res) => {
   // Send WhatsApp welcome message
   if (r.phone) {
     const roomNum = r.rooms ? r.rooms.number : r.room_id;
-    sendWelcome(r.guest_name, r.phone, roomNum);
+    sendWelcome(req.hotel, r.guest_name, r.phone, roomNum);
   }
 
-  res.redirect(`/reservations/${r.id}?msg=Checked+in+✓`);
+  res.redirect(`/${req.hotel.slug}/reservations/${r.id}?msg=Checked+in+✓`);
 });
 
 // ── POST /reservations/:id/checkout ───────────────────────
@@ -273,7 +274,7 @@ router.post('/:id/checkout', requireAdmin, async (req, res) => {
     });
   }
 
-  res.redirect(`/reservations/${r.id}?msg=Checked+out+—+room+marked+dirty`);
+  res.redirect(`/${req.hotel.slug}/reservations/${r.id}?msg=Checked+out+—+room+marked+dirty`);
 });
 
 // ── POST /reservations/:id/cancel ─────────────────────────
@@ -290,7 +291,7 @@ router.post('/:id/cancel', requireAdmin, async (req, res) => {
     }
   }
 
-  res.redirect('/?msg=Reservation+cancelled');
+  res.redirect(`/${req.hotel.slug}/reservations?msg=Reservation+cancelled');
 });
 
 // ── Helpers ────────────────────────────────────────────────
@@ -309,7 +310,7 @@ function statusLabel(s) {
 
 function reservationCard(r) {
   return `
-    <a href="/reservations/${r.id}" class="res-card">
+    <a href="/${req.hotel.slug}/reservations/${r.id}" class="res-card">
       <div class="res-avatar">${initials(r.guest_name)}</div>
       <div class="res-info">
         <div class="res-name">${r.guest_name}</div>
@@ -329,7 +330,7 @@ function actionsHtml(r, availableRooms) {
       <div class="section-label">Assign a room</div>
       <div class="room-picker">
         ${availableRooms.map(room => `
-          <form method="POST" action="/reservations/${r.id}/assign">
+          <form method="POST" action="/${req.hotel.slug}/reservations/${r.id}/assign">
             <input type="hidden" name="room_id" value="${room.id}" />
             <button type="submit" class="room-pick-btn">
               <span class="room-pick-num">${room.number}</span>
@@ -344,13 +345,13 @@ function actionsHtml(r, availableRooms) {
   if (r.status === 'confirmed') {
     return `
       <div class="section-label">Actions</div>
-      <form method="POST" action="/reservations/${r.id}/checkin">
+      <form method="POST" action="/${req.hotel.slug}/reservations/${r.id}/checkin">
         <button type="submit" class="btn-primary btn-full btn-large">Check in →</button>
       </form>
       <div class="section-label" style="margin-top:12px">Change room</div>
       <div class="room-picker">
         ${availableRooms.map(room => `
-          <form method="POST" action="/reservations/${r.id}/assign">
+          <form method="POST" action="/${req.hotel.slug}/reservations/${r.id}/assign">
             <input type="hidden" name="room_id" value="${room.id}" />
             <button type="submit" class="room-pick-btn">
               <span class="room-pick-num">${room.number}</span>
@@ -364,7 +365,7 @@ function actionsHtml(r, availableRooms) {
 
   if (r.status === 'checked_in') {
     return `
-      <form method="POST" action="/reservations/${r.id}/checkout" onsubmit="return confirm('Check out ${r.guest_name}?')">
+      <form method="POST" action="/${req.hotel.slug}/reservations/${r.id}/checkout" onsubmit="return confirm('Check out ${r.guest_name}?')">
         <button type="submit" class="btn-warning btn-full btn-large">Check out →</button>
       </form>
     `;

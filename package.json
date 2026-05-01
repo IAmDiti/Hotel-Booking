@@ -1,7 +1,7 @@
 {
-  "name": "pocket-reception",
-  "version": "1.0.0",
-  "description": "Simple hotel management app for small hotels",
+  "name": "pocket-reception-saas",
+  "version": "2.0.0",
+  "description": "Pocket Reception — Multi-tenant Hotel SaaS",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
