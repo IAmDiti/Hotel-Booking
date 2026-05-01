@@ -139,9 +139,9 @@ body{font-family:-apple-system,sans-serif;background:#f6f6f4;margin:0;padding:0}
         </div>
       </div>
       <div class="hotel-actions">
-        <a href="/admin/hotels/${h.slug}/access" class="btn-visit">Bookings →</a>
-        <a href="/admin/hotels/${h.slug}/access?goto=analytics" class="btn-visit" style="background:#6b21a8">📊</a>
-        <a href="/admin/hotels/${h.slug}/access?goto=settings" class="btn-visit" style="background:#374151">⚙️</a>
+        <a href="/admin/hotels/${h.slug}/access" class="btn-visit">Open →</a>
+        <a href="/admin/hotels/${h.slug}/analytics" class="btn-visit" style="background:#6b21a8">📊 Analytics</a>
+        <a href="/admin/hotels/${h.slug}/settings" class="btn-visit" style="background:#374151">⚙️ Settings</a>
         <form method="POST" action="/admin/hotels/${h.id}/toggle" style="margin:0">
           <button type="submit" class="btn-toggle">${h.active ? 'Disable' : 'Enable'}</button>
         </form>
@@ -176,9 +176,6 @@ router.get('/hotels/:slug/access', requireSuperAdmin, async (req, res) => {
   req.session.hotelId = hotel.id;
   req.session.hotelSlug = hotel.slug;
   req.session.superAdmin = true; // keep super admin privileges
-  const goto = req.query.goto;
-  if (goto === 'analytics') return res.redirect(`/${hotel.slug}/analytics`);
-  if (goto === 'settings') return res.redirect(`/${hotel.slug}/settings`);
   res.redirect(`/${hotel.slug}/reservations`);
 });
 
@@ -187,5 +184,245 @@ router.post('/logout', (req, res) => {
   req.session.superAdmin = false;
   res.redirect('/admin/login');
 });
+
+// GET /admin/hotels/:slug/analytics — analytics inside super admin
+router.get('/hotels/:slug/analytics', requireSuperAdmin, async (req, res) => {
+  const supabase = require('../lib/supabase');
+  const { data: hotel } = await supabase.from('hotels').select('*').eq('slug', req.params.slug).single();
+  if (!hotel) return res.redirect('/admin');
+
+  const now = new Date();
+  const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+  const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split('T')[0];
+
+  const [
+    { data: allRooms },
+    { data: thisMonthRes },
+    { data: lastMonthRes },
+    { data: activeRes },
+    { data: recentRes }
+  ] = await Promise.all([
+    supabase.from('rooms').select('id,status').eq('hotel_id', hotel.id),
+    supabase.from('reservations').select('*').eq('hotel_id', hotel.id).gte('created_at', thisMonthStart).neq('status','cancelled'),
+    supabase.from('reservations').select('*').eq('hotel_id', hotel.id).gte('created_at', lastMonthStart).lt('created_at', thisMonthStart).neq('status','cancelled'),
+    supabase.from('reservations').select('*, rooms(number)').eq('hotel_id', hotel.id).eq('status','checked_in'),
+    supabase.from('reservations').select('*, rooms(number)').eq('hotel_id', hotel.id).neq('status','cancelled').order('created_at',{ascending:false}).limit(10)
+  ]);
+
+  const totalRooms = allRooms?.length || 0;
+  const occupiedNow = allRooms?.filter(r => r.status === 'occupied').length || 0;
+  const freeNow = allRooms?.filter(r => r.status === 'free').length || 0;
+  const dirtyNow = allRooms?.filter(r => r.status === 'dirty').length || 0;
+  const occupancyRate = totalRooms > 0 ? Math.round((occupiedNow / totalRooms) * 100) : 0;
+  const thisMonthCount = thisMonthRes?.length || 0;
+  const lastMonthCount = lastMonthRes?.length || 0;
+  const monthDiff = thisMonthCount - lastMonthCount;
+  const avgStay = thisMonthRes?.length > 0
+    ? (thisMonthRes.reduce((s,r) => s + Math.round((new Date(r.check_out)-new Date(r.check_in))/86400000), 0) / thisMonthRes.length).toFixed(1) : 0;
+  const fmtDate = d => { const [y,m,day] = d.split('-'); return `${day}.${m}.${y.slice(2)}`; };
+
+  res.send(adminPage(hotel.name, `
+    <div style="margin-bottom:20px;display:flex;align-items:center;gap:12px">
+      <a href="/admin" style="color:#6b7280;text-decoration:none;font-size:14px">← Admin</a>
+      <h2 style="font-size:18px;font-weight:700">${hotel.name} — Analytics</h2>
+    </div>
+    <div class="stats-bar">
+      <div class="stat-box"><div class="stat-box-num">${totalRooms}</div><div class="stat-box-label">Total rooms</div></div>
+      <div class="stat-box"><div class="stat-box-num" style="color:#2d9e6b">${freeNow}</div><div class="stat-box-label">Free</div></div>
+      <div class="stat-box"><div class="stat-box-num" style="color:#d94f4f">${occupiedNow}</div><div class="stat-box-label">Occupied</div></div>
+    </div>
+    <div class="stat-box" style="margin-bottom:16px">
+      <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:10px">
+        <span style="font-size:32px;font-weight:800;color:#1a1a2e">${occupancyRate}%</span>
+        <span style="font-size:13px;color:#888">Current occupancy</span>
+      </div>
+      <div style="background:#f3f4f6;border-radius:20px;height:10px;overflow:hidden">
+        <div style="background:#1a1a2e;height:100%;border-radius:20px;width:${occupancyRate}%"></div>
+      </div>
+    </div>
+    <div class="stats-bar">
+      <div class="stat-box">
+        <div class="stat-box-num">${thisMonthCount}</div>
+        <div class="stat-box-label">This month</div>
+        <div style="font-size:11px;color:${monthDiff>=0?'#2d9e6b':'#d94f4f'};margin-top:4px">${monthDiff>=0?'+':''}${monthDiff} vs last</div>
+      </div>
+      <div class="stat-box"><div class="stat-box-num">${avgStay}</div><div class="stat-box-label">Avg nights</div></div>
+      <div class="stat-box"><div class="stat-box-num">${activeRes?.length||0}</div><div class="stat-box-label">Active guests</div></div>
+    </div>
+    ${activeRes?.length ? `
+      <h3 style="font-size:13px;font-weight:700;color:#888;text-transform:uppercase;margin:16px 0 10px">Current guests</h3>
+      ${activeRes.map(r=>`
+        <div style="background:white;border-radius:10px;padding:12px 14px;margin-bottom:8px;border:0.5px solid #e5e7eb;display:flex;align-items:center;gap:10px">
+          <div style="width:36px;height:36px;border-radius:50%;background:#1a1a2e;color:white;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">${r.guest_name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</div>
+          <div style="flex:1"><div style="font-size:14px;font-weight:600">${r.guest_name}</div><div style="font-size:12px;color:#888">Room ${r.rooms?.number||'?'} · out ${fmtDate(r.check_out)}</div></div>
+        </div>`).join('')}` : ''}
+    <h3 style="font-size:13px;font-weight:700;color:#888;text-transform:uppercase;margin:16px 0 10px">Recent bookings</h3>
+    ${recentRes?.map(r=>`
+      <div style="background:white;border-radius:10px;padding:12px 14px;margin-bottom:8px;border:0.5px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between">
+        <div><div style="font-size:14px;font-weight:600">${r.guest_name}</div><div style="font-size:12px;color:#888">${fmtDate(r.check_in)} → ${fmtDate(r.check_out)}</div></div>
+        <span style="font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;background:${r.status==='checked_in'?'#eaf6f0':r.status==='pending'?'#fdf3dc':'#f3f4f6'};color:${r.status==='checked_in'?'#2d9e6b':r.status==='pending'?'#c47f10':'#888'}">${r.status.replace('_',' ')}</span>
+      </div>`).join('')||'<p style="color:#888;font-size:14px">No bookings yet</p>'}
+  `));
+});
+
+// GET /admin/hotels/:slug/settings — settings inside super admin
+router.get('/hotels/:slug/settings', requireSuperAdmin, async (req, res) => {
+  const supabase = require('../lib/supabase');
+  const { data: hotel } = await supabase.from('hotels').select('*').eq('slug', req.params.slug).single();
+  const { data: rooms } = await supabase.from('rooms').select('*').eq('hotel_id', hotel.id).order('number');
+  if (!hotel) return res.redirect('/admin');
+  const msg = req.query.msg || null;
+  const err = req.query.error || null;
+
+  res.send(adminPage(hotel.name + ' — Settings', `
+    <div style="margin-bottom:20px;display:flex;align-items:center;gap:12px">
+      <a href="/admin" style="color:#6b7280;text-decoration:none;font-size:14px">← Admin</a>
+      <h2 style="font-size:18px;font-weight:700">${hotel.name} — Settings</h2>
+    </div>
+    ${msg ? `<div style="background:#eaf6f0;color:#2d9e6b;padding:10px 14px;border-radius:8px;margin-bottom:16px;font-size:14px">${msg}</div>` : ''}
+    ${err ? `<div style="background:#fdf0f0;color:#d94f4f;padding:10px 14px;border-radius:8px;margin-bottom:16px;font-size:14px">${err}</div>` : ''}
+
+    <div class="add-hotel" style="margin-bottom:16px">
+      <h3>Hotel information</h3>
+      <form method="POST" action="/admin/hotels/${hotel.slug}/settings/info">
+        <div class="form-grid">
+          <div class="form-field"><label>Hotel name</label><input type="text" name="name" value="${hotel.name}" required/></div>
+          <div class="form-field"><label>WiFi name</label><input type="text" name="wifi_name" value="${hotel.wifi_name||''}"/></div>
+          <div class="form-field"><label>WiFi password</label><input type="text" name="wifi_password" value="${hotel.wifi_password||''}"/></div>
+          <div class="form-field"><label>Check-out time</label><input type="text" name="checkout_time" value="${hotel.checkout_time||'11:00'}"/></div>
+          <div class="form-field"><label>Restaurant hours</label><input type="text" name="restaurant_hours" value="${hotel.restaurant_hours||''}"/></div>
+          <div class="form-field"><label>Extra info</label><input type="text" name="extra_info" value="${hotel.extra_info||''}"/></div>
+        </div>
+        <button type="submit" class="btn-add">Save info</button>
+      </form>
+    </div>
+
+    <div class="add-hotel" style="margin-bottom:16px">
+      <h3>Access PINs</h3>
+      <form method="POST" action="/admin/hotels/${hotel.slug}/settings/pins">
+        <div class="form-grid">
+          <div class="form-field"><label>Admin (receptionist) PIN</label><input type="text" name="admin_pin" value="${hotel.admin_pin}" required/></div>
+          <div class="form-field"><label>Cleaner PIN</label><input type="text" name="cleaner_pin" value="${hotel.cleaner_pin}" required/></div>
+        </div>
+        <button type="submit" class="btn-add">Update PINs</button>
+      </form>
+    </div>
+
+    <div class="add-hotel" style="margin-bottom:16px">
+      <h3>WhatsApp (Twilio)</h3>
+      <form method="POST" action="/admin/hotels/${hotel.slug}/settings/twilio">
+        <div class="form-grid">
+          <div class="form-field"><label>Account SID</label><input type="text" name="twilio_account_sid" value="${hotel.twilio_account_sid||''}" placeholder="ACxxxxxxxx"/></div>
+          <div class="form-field"><label>Auth Token</label><input type="password" name="twilio_auth_token" value="${hotel.twilio_auth_token||''}"/></div>
+          <div class="form-field"><label>WhatsApp From</label><input type="text" name="twilio_whatsapp_from" value="${hotel.twilio_whatsapp_from||''}" placeholder="+14155238886"/></div>
+        </div>
+        <button type="submit" class="btn-add">Save WhatsApp</button>
+      </form>
+    </div>
+
+    <div class="add-hotel">
+      <h3>Rooms (${rooms?.length||0})</h3>
+      <div style="margin-bottom:12px">
+        ${rooms?.map(r=>`
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:0.5px solid #f3f4f6">
+            <span style="font-size:14px">Room ${r.number} · Floor ${r.floor}</span>
+            <div style="display:flex;align-items:center;gap:10px">
+              <span style="font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;background:${r.status==='free'?'#eaf6f0':r.status==='occupied'?'#fdf0f0':'#fdf3dc'};color:${r.status==='free'?'#2d9e6b':r.status==='occupied'?'#d94f4f':'#c47f10'}">${r.status}</span>
+              <form method="POST" action="/admin/hotels/${hotel.slug}/settings/rooms/${r.id}/delete" onsubmit="return confirm('Delete room ${r.number}?')" style="margin:0">
+                <button type="submit" style="background:none;border:none;color:#d94f4f;font-size:16px;cursor:pointer">✕</button>
+              </form>
+            </div>
+          </div>`).join('')||'<p style="color:#888;font-size:14px">No rooms</p>'}
+      </div>
+      <form method="POST" action="/admin/hotels/${hotel.slug}/settings/rooms">
+        <div class="form-grid">
+          <div class="form-field"><label>Room number</label><input type="text" name="number" placeholder="e.g. 105" required/></div>
+          <div class="form-field"><label>Floor</label><input type="number" name="floor" placeholder="1" min="1" required/></div>
+        </div>
+        <button type="submit" class="btn-add">Add room</button>
+      </form>
+    </div>
+  `));
+});
+
+// Settings POST handlers
+router.post('/hotels/:slug/settings/info', requireSuperAdmin, async (req, res) => {
+  const supabase = require('../lib/supabase');
+  const { name, wifi_name, wifi_password, checkout_time, restaurant_hours, extra_info } = req.body;
+  await supabase.from('hotels').update({ name, wifi_name, wifi_password, checkout_time, restaurant_hours, extra_info }).eq('slug', req.params.slug);
+  res.redirect(`/admin/hotels/${req.params.slug}/settings?msg=Hotel+info+saved+✓`);
+});
+
+router.post('/hotels/:slug/settings/pins', requireSuperAdmin, async (req, res) => {
+  const supabase = require('../lib/supabase');
+  const { admin_pin, cleaner_pin } = req.body;
+  if (admin_pin === cleaner_pin) return res.redirect(`/admin/hotels/${req.params.slug}/settings?error=PINs+must+be+different`);
+  await supabase.from('hotels').update({ admin_pin, cleaner_pin }).eq('slug', req.params.slug);
+  res.redirect(`/admin/hotels/${req.params.slug}/settings?msg=PINs+updated+✓`);
+});
+
+router.post('/hotels/:slug/settings/twilio', requireSuperAdmin, async (req, res) => {
+  const supabase = require('../lib/supabase');
+  const { twilio_account_sid, twilio_auth_token, twilio_whatsapp_from } = req.body;
+  await supabase.from('hotels').update({ twilio_account_sid, twilio_auth_token, twilio_whatsapp_from }).eq('slug', req.params.slug);
+  res.redirect(`/admin/hotels/${req.params.slug}/settings?msg=WhatsApp+saved+✓`);
+});
+
+router.post('/hotels/:slug/settings/rooms', requireSuperAdmin, async (req, res) => {
+  const supabase = require('../lib/supabase');
+  const { data: hotel } = await supabase.from('hotels').select('id').eq('slug', req.params.slug).single();
+  const { number, floor } = req.body;
+  await supabase.from('rooms').insert({ hotel_id: hotel.id, number: number.trim(), floor: parseInt(floor), status: 'free' });
+  res.redirect(`/admin/hotels/${req.params.slug}/settings?msg=Room+${number}+added+✓`);
+});
+
+router.post('/hotels/:slug/settings/rooms/:id/delete', requireSuperAdmin, async (req, res) => {
+  const supabase = require('../lib/supabase');
+  await supabase.from('rooms').delete().eq('id', req.params.id);
+  res.redirect(`/admin/hotels/${req.params.slug}/settings?msg=Room+deleted`);
+});
+
+function adminPage(title, body) {
+  return `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${title} · Super Admin</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,sans-serif;background:#f6f6f4;min-height:100vh}
+.admin-topbar{background:#1a1a2e;color:white;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+.admin-title{font-size:16px;font-weight:700}
+.admin-body{padding:20px;max-width:900px;margin:0 auto}
+.hotel-card{background:white;border-radius:12px;padding:16px;margin-bottom:12px;border:0.5px solid rgba(0,0,0,0.1);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.hotel-name{font-size:15px;font-weight:600}
+.hotel-slug{font-size:12px;color:#888;margin-top:2px}
+.hotel-stats{display:flex;gap:16px;font-size:13px}
+.hotel-stat{text-align:center}
+.hotel-stat-num{font-size:18px;font-weight:700;color:#1a1a2e}
+.hotel-stat-label{font-size:10px;color:#aaa;text-transform:uppercase}
+.hotel-actions{display:flex;gap:8px;flex-wrap:wrap}
+.btn-visit{background:#1a1a2e;color:white;padding:7px 14px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600;white-space:nowrap}
+.btn-toggle{background:#fdf0f0;color:#d94f4f;border:1px solid #f5b8b8;padding:7px 14px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
+.add-hotel{background:white;border-radius:12px;padding:20px;margin-bottom:16px;border:0.5px solid rgba(0,0,0,0.1)}
+.add-hotel h3{font-size:15px;font-weight:700;margin-bottom:14px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.form-field{display:flex;flex-direction:column;gap:5px}
+.form-field label{font-size:11px;font-weight:600;color:#888;text-transform:uppercase}
+.form-field input{border:1px solid #ddd;border-radius:8px;padding:10px;font-size:14px;font-family:inherit}
+.btn-add{background:#1a1a2e;color:white;border:none;border-radius:8px;padding:12px 20px;font-size:14px;font-weight:600;cursor:pointer}
+.stats-bar{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
+.stat-box{background:white;border-radius:12px;padding:16px;text-align:center;border:0.5px solid rgba(0,0,0,0.1)}
+.stat-box-num{font-size:28px;font-weight:800;color:#1a1a2e}
+.stat-box-label{font-size:12px;color:#888;margin-top:4px}
+</style></head>
+<body>
+<div class="admin-topbar">
+  <div class="admin-title">🏨 Pocket Reception — Super Admin</div>
+  <form method="POST" action="/admin/logout" style="margin:0">
+    <button type="submit" style="background:rgba(255,255,255,0.15);border:none;color:white;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:13px">Logout</button>
+  </form>
+</div>
+<div class="admin-body">${body}</div>
+</body></html>`;
+}
 
 module.exports = router;
