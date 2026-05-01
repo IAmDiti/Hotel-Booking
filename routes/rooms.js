@@ -9,10 +9,11 @@ router.get('/', requireAdmin, async (req, res) => {
   const { checkIn, checkOut } = req.query;
 
   // Run rooms fetch + optional availability check in parallel
-  const queries = [supabase.from('rooms').select('*').order('number')];
+  const queries = [supabase.from('rooms').select('*').eq('hotel_id', req.hotel.id).order('number')];
   if (checkIn && checkOut && checkOut > checkIn) {
     queries.push(
       supabase.from('reservations').select('room_id')
+        .eq('hotel_id', req.hotel.id)
         .lt('check_in', checkOut)
         .gt('check_out', checkIn)
         .in('status', ['confirmed', 'checked_in'])
@@ -42,6 +43,7 @@ router.get('/', requireAdmin, async (req, res) => {
     const { data: checkoutToday } = await supabase
       .from('reservations')
       .select('room_id')
+      .eq('hotel_id', req.hotel.id)
       .eq('check_out', checkIn)
       .in('status', ['confirmed', 'checked_in'])
       .not('room_id', 'is', null);
@@ -152,6 +154,7 @@ router.get('/:id', requireAdmin, async (req, res) => {
   const { data: room, error } = await supabase
     .from('rooms')
     .select('*')
+    .eq('hotel_id', req.hotel.id)
     .eq('id', req.params.id)
     .single();
 
@@ -250,7 +253,7 @@ router.post('/:id/status', requireAdmin, async (req, res) => {
   const validStatuses = ['free', 'occupied', 'dirty'];
   if (!validStatuses.includes(status)) return res.redirect(`/${req.hotel.slug}/rooms`);
 
-  await supabase.from('rooms').update({ status }).eq('id', req.params.id);
+  await supabase.from('rooms').update({ status }).eq('id', req.params.id).eq('hotel_id', req.hotel.id);
   res.redirect('/rooms?msg=Room+updated+✓');
 });
 

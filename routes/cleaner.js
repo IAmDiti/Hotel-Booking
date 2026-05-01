@@ -14,7 +14,7 @@ router.get('/', requireCleaner, async (req, res) => {
     .eq('status', 'dirty')
     .order('number');
 
-  if (error) return res.send(renderLayout('Cleaner', `<p class="error-msg">${error.message}</p>`, 'cleaner', req.session.role));
+  if (error) return res.send(renderLayout('Cleaner', `<p class="error-msg">${error.message}</p>`, 'cleaner', req.session.role, req.hotel));
 
   const html = `
     <div class="page-header">
@@ -64,8 +64,8 @@ router.get('/', requireCleaner, async (req, res) => {
 
 // ── POST /cleaner/:id/clean — Mark single room clean ──────
 router.post('/:id/clean', requireCleaner, async (req, res) => {
-  const { data: room } = await supabase.from('rooms').select('number').eq('id', req.params.id).single();
-  await supabase.from('rooms').update({ status: 'free' }).eq('id', req.params.id);
+  const { data: room } = await supabase.from('rooms').select('number').eq('id', req.params.id).eq('hotel_id', req.hotel.id).single();
+  await supabase.from('rooms').update({ status: 'free' }).eq('id', req.params.id).eq('hotel_id', req.hotel.id);
 
   const roomNum = room ? room.number : '?';
   sendPushToRole('admin', {
@@ -82,8 +82,8 @@ router.post('/:id/clean', requireCleaner, async (req, res) => {
 
 // ── POST /cleaner/all-clean — Mark all dirty rooms clean ──
 router.post('/all-clean', requireCleaner, async (req, res) => {
-  const { data: dirtyRooms } = await supabase.from('rooms').select('number').eq('status', 'dirty');
-  await supabase.from('rooms').update({ status: 'free' }).eq('status', 'dirty');
+  const { data: dirtyRooms } = await supabase.from('rooms').select('number').eq('hotel_id', req.hotel.id).eq('status', 'dirty');
+  await supabase.from('rooms').update({ status: 'free' }).eq('hotel_id', req.hotel.id).eq('status', 'dirty');
 
   const count = dirtyRooms ? dirtyRooms.length : 0;
   if (count > 0) {

@@ -132,6 +132,7 @@ router.get('/:id', requireAdmin, async (req, res) => {
   const { data: r, error } = await supabase
     .from('reservations')
     .select('*, rooms(id, number, floor, status)')
+    .eq('hotel_id', req.hotel.id)
     .eq('id', req.params.id)
     .single();
 
@@ -142,10 +143,11 @@ router.get('/:id', requireAdmin, async (req, res) => {
   if (r.status === 'pending' || r.status === 'confirmed') {
     const [{ data: conflicts }, { data: allRooms }] = await Promise.all([
       supabase.from('reservations').select('room_id')
+        .eq('hotel_id', req.hotel.id)
         .lt('check_in', r.check_out).gt('check_out', r.check_in)
         .in('status', ['confirmed', 'checked_in'])
         .not('room_id', 'is', null).neq('id', r.id),
-      supabase.from('rooms').select('id, number, floor, status').order('number')
+      supabase.from('rooms').select('id, number, floor, status').eq('hotel_id', req.hotel.id).order('number')
     ]);
     const takenIds = (conflicts || []).map(c => c.room_id).filter(Boolean);
     availableRooms = (allRooms || []).filter(room =>
@@ -238,7 +240,7 @@ router.post('/:id/assign', requireAdmin, async (req, res) => {
 
 // ── POST /reservations/:id/checkin ─────────────────────────
 router.post('/:id/checkin', requireAdmin, async (req, res) => {
-  const { data: r } = await supabase.from('reservations').select('*, rooms(number)').eq('id', req.params.id).single();
+  const { data: r } = await supabase.from('reservations').select('*, rooms(number)').eq('hotel_id', req.hotel.id).eq('id', req.params.id).single();
   if (!r || !r.room_id) return res.redirect(`/${req.hotel.slug}/reservations/${req.params.id}?msg=Assign+a+room+first`);
 
   await supabase.from('reservations').update({ status: 'checked_in' }).eq('id', r.id);
