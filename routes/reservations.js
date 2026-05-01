@@ -4,6 +4,7 @@ const supabase = require('../lib/supabase');
 const { requireAdmin } = require('../middleware/auth');
 const { renderLayout } = require('./layout');
 const { sendPushToRole } = require('../lib/push');
+const { sendWelcome } = require('../lib/whatsapp');
 
 // ── GET / — Reservations list (home) ──────────────────────
 router.get('/', requireAdmin, async (req, res) => {
@@ -45,6 +46,10 @@ router.get('/', requireAdmin, async (req, res) => {
               <label>Check-out</label>
               <input type="date" name="check_out" id="checkout" required />
             </div>
+          </div>
+          <div class="field-group">
+            <label>Phone (WhatsApp)</label>
+            <input type="tel" name="phone" placeholder="e.g. +38970123456" autocomplete="off" />
           </div>
           <div class="field-group">
             <label>Notes (optional)</label>
@@ -99,7 +104,7 @@ router.get('/', requireAdmin, async (req, res) => {
 
 // ── POST /reservations — Create reservation ────────────────
 router.post('/', requireAdmin, async (req, res) => {
-  const { guest_name, check_in, check_out, notes } = req.body;
+  const { guest_name, check_in, check_out, notes, phone } = req.body;
 
   if (!guest_name || !check_in || !check_out) {
     return res.redirect('/?error=Missing+required+fields');
@@ -113,6 +118,7 @@ router.post('/', requireAdmin, async (req, res) => {
     check_in,
     check_out,
     notes: notes?.trim() || null,
+    phone: phone?.trim() || null,
     status: 'pending'
   });
 
@@ -180,6 +186,7 @@ router.get('/:id', requireAdmin, async (req, res) => {
         <span class="detail-label">Check-out</span>
         <span class="detail-value">${r.check_out}</span>
       </div>
+      ${r.phone ? `<div class="detail-row"><span class="detail-label">📱 WhatsApp</span><span class="detail-value">${r.phone}</span></div>` : ''}
       ${r.notes ? `<div class="detail-row"><span class="detail-label">Notes</span><span class="detail-value">${r.notes}</span></div>` : ''}
     </div>
 
@@ -230,11 +237,17 @@ router.post('/:id/assign', requireAdmin, async (req, res) => {
 
 // ── POST /reservations/:id/checkin ─────────────────────────
 router.post('/:id/checkin', requireAdmin, async (req, res) => {
-  const { data: r } = await supabase.from('reservations').select('*').eq('id', req.params.id).single();
+  const { data: r } = await supabase.from('reservations').select('*, rooms(number)').eq('id', req.params.id).single();
   if (!r || !r.room_id) return res.redirect(`/reservations/${req.params.id}?msg=Assign+a+room+first`);
 
   await supabase.from('reservations').update({ status: 'checked_in' }).eq('id', r.id);
   await supabase.from('rooms').update({ status: 'occupied' }).eq('id', r.room_id);
+
+  // Send WhatsApp welcome message
+  if (r.phone) {
+    const roomNum = r.rooms ? r.rooms.number : r.room_id;
+    sendWelcome(r.guest_name, r.phone, roomNum);
+  }
 
   res.redirect(`/reservations/${r.id}?msg=Checked+in+✓`);
 });

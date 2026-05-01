@@ -81,3 +81,8 @@ create table if not exists push_subscriptions (
 );
 
 create index if not exists idx_push_role on push_subscriptions(role);
+
+-- ============================================================
+-- Add phone number to reservations (run this in Supabase SQL editor)
+-- ============================================================
+alter table reservations add column if not exists phone text;
