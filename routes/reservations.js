@@ -332,7 +332,7 @@ function actionsHtml(r, availableRooms, slug) {
       <div class="section-label">Assign a room</div>
       <div class="room-picker">
         ${availableRooms.map(room => `
-          <form method="POST" action="/${req.hotel.slug}/reservations/${r.id}/assign">
+          <form method="POST" action="/${slug}/reservations/${r.id}/assign">
             <input type="hidden" name="room_id" value="${room.id}" />
             <button type="submit" class="room-pick-btn">
               <span class="room-pick-num">${room.number}</span>
@@ -347,13 +347,13 @@ function actionsHtml(r, availableRooms, slug) {
   if (r.status === 'confirmed') {
     return `
       <div class="section-label">Actions</div>
-      <form method="POST" action="/${req.hotel.slug}/reservations/${r.id}/checkin">
+      <form method="POST" action="/${slug}/reservations/${r.id}/checkin">
         <button type="submit" class="btn-primary btn-full btn-large">Check in →</button>
       </form>
       <div class="section-label" style="margin-top:12px">Change room</div>
       <div class="room-picker">
         ${availableRooms.map(room => `
-          <form method="POST" action="/${req.hotel.slug}/reservations/${r.id}/assign">
+          <form method="POST" action="/${slug}/reservations/${r.id}/assign">
             <input type="hidden" name="room_id" value="${room.id}" />
             <button type="submit" class="room-pick-btn">
               <span class="room-pick-num">${room.number}</span>
@@ -367,7 +367,7 @@ function actionsHtml(r, availableRooms, slug) {
 
   if (r.status === 'checked_in') {
     return `
-      <form method="POST" action="/${req.hotel.slug}/reservations/${r.id}/checkout" onsubmit="return confirm('Check out ${r.guest_name}?')">
+      <form method="POST" action="/${slug}/reservations/${r.id}/checkout" onsubmit="return confirm('Check out ${r.guest_name}?')">
         <button type="submit" class="btn-warning btn-full btn-large">Check out →</button>
       </form>
     `;
