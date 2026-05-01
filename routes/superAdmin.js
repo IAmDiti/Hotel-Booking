@@ -145,6 +145,9 @@ body{font-family:-apple-system,sans-serif;background:#f6f6f4;margin:0;padding:0}
         <form method="POST" action="/admin/hotels/${h.id}/toggle" style="margin:0">
           <button type="submit" class="btn-toggle">${h.active ? 'Disable' : 'Enable'}</button>
         </form>
+        <form method="POST" action="/admin/hotels/${h.id}/delete" onsubmit="return confirm('Delete ${h.name}? This will delete ALL rooms and reservations. This cannot be undone.')" style="margin:0">
+          <button type="submit" style="background:#fdf0f0;color:#d94f4f;border:1px solid #f5b8b8;padding:7px 14px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">Delete</button>
+        </form>
       </div>
     </div>
   `).join('') || '<p style="color:#888;font-size:14px">No hotels yet</p>'}
@@ -158,6 +161,12 @@ router.post('/hotels', requireSuperAdmin, async (req, res) => {
   const { error } = await supabase.from('hotels').insert({ name, slug, admin_pin, cleaner_pin });
   if (error) return res.redirect(`/admin?msg=Error:+${encodeURIComponent(error.message)}`);
   res.redirect(`/admin?msg=Hotel+${name}+created+✓`);
+});
+
+// POST /admin/hotels/:id/delete
+router.post('/hotels/:id/delete', requireSuperAdmin, async (req, res) => {
+  await supabase.from('hotels').delete().eq('id', req.params.id);
+  res.redirect('/admin?msg=Hotel+deleted');
 });
 
 // POST /admin/hotels/:id/toggle
