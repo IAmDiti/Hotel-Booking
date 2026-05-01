@@ -266,14 +266,6 @@ router.post('/:id/checkout', requireAdmin, async (req, res) => {
     // Get room number for notification
     const { data: room } = await supabase.from('rooms').select('number').eq('id', r.room_id).single();
     const roomNum = room ? room.number : '?';
-    sendPushToRole('cleaner', {
-      title: '🧹 Room needs cleaning',
-      body: `Room ${roomNum} is ready to be cleaned`,
-      icon: '/icons/icon-192.svg',
-      badge: '/icons/icon-192.svg',
-      vibrate: [200, 100, 200],
-      data: { url: '/cleaner' }
-    });
   }
 
   res.redirect(`/${req.hotel.slug}/reservations/${r.id}?msg=Checked+out+—+room+marked+dirty`);
