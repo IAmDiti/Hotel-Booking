@@ -139,8 +139,9 @@ body{font-family:-apple-system,sans-serif;background:#f6f6f4;margin:0;padding:0}
         </div>
       </div>
       <div class="hotel-actions">
-        <a href="/admin/hotels/${h.slug}/access" class="btn-visit">Open →</a>
-        <a href="/admin/hotels/${h.slug}/access" onclick="sessionStorage.setItem('goTo','analytics')" class="btn-visit" style="background:#6b21a8">📊</a>
+        <a href="/admin/hotels/${h.slug}/access" class="btn-visit">Bookings →</a>
+        <a href="/admin/hotels/${h.slug}/access?goto=analytics" class="btn-visit" style="background:#6b21a8">📊</a>
+        <a href="/admin/hotels/${h.slug}/access?goto=settings" class="btn-visit" style="background:#374151">⚙️</a>
         <form method="POST" action="/admin/hotels/${h.id}/toggle" style="margin:0">
           <button type="submit" class="btn-toggle">${h.active ? 'Disable' : 'Enable'}</button>
         </form>
@@ -175,6 +176,9 @@ router.get('/hotels/:slug/access', requireSuperAdmin, async (req, res) => {
   req.session.hotelId = hotel.id;
   req.session.hotelSlug = hotel.slug;
   req.session.superAdmin = true; // keep super admin privileges
+  const goto = req.query.goto;
+  if (goto === 'analytics') return res.redirect(`/${hotel.slug}/analytics`);
+  if (goto === 'settings') return res.redirect(`/${hotel.slug}/settings`);
   res.redirect(`/${hotel.slug}/reservations`);
 });
 

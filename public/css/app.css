@@ -103,7 +103,7 @@ html, body {
 /* ── Bottom nav ──────────────────────────────────────────── */
 .bottom-nav {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   border-top: 0.5px solid var(--border);
   background: var(--surface);
   flex-shrink: 0;
